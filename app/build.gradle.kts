@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "io.github.taskengineer.rcgear"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "io.github.taskengineer.rcgear"
         minSdk = 26                            // Android 8.0
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
 
@@ -122,6 +122,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 
     // Google Fonts を Compose で使うための依存
-    // Roboto Mono を動的にダウンロードして使えるようにする
-    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.0")
+    // （カタログ経由、BOM がバージョンを管理）
+    implementation(libs.androidx.compose.ui.text.google.fonts)
 }

@@ -1,6 +1,6 @@
 [versions]
 # ===== Kotlin / AGP =====
-agp = "8.5.2"
+agp = "8.7.3"
 kotlin = "2.0.20"
 ksp = "2.0.20-1.0.25"
 
@@ -11,7 +11,7 @@ activityCompose = "1.9.2"
 splashscreen = "1.0.1"
 
 # ===== Compose =====
-composeBom = "2024.09.02"
+composeBom = "2025.05.00"
 navigationCompose = "2.8.1"
 
 # ===== Hilt =====
@@ -79,6 +79,9 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
+
+# 既存の行はそのまま、以下を追加
+androidx-compose-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
