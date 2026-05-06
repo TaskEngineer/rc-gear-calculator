@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        ベーステーマ。Compose 側で MaterialTheme を使うため、
+        XML テーマは Compose との互換性確保用の最小定義に留める。
+    -->
+    <style name="Theme.RcGear" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!--
+        Splash Screen API 用のテーマ。Android 12+ ではこのテーマの値が自動でスプラッシュに反映される。
+        参考: https://developer.android.com/develop/ui/views/launch/splash-screen
+    -->
+    <style name="Theme.RcGear.Splash" parent="Theme.SplashScreen">
+        <!-- スプラッシュの背景色 -->
+        <item name="windowSplashScreenBackground">@color/hud_background</item>
+        <!-- スプラッシュ表示後にメインテーマへ切り替え -->
+        <item name="postSplashScreenTheme">@style/Theme.RcGear</item>
+        <!-- スプラッシュアイコン（暫定、Step 12 で差し替え） -->
+        <item name="windowSplashScreenAnimatedIcon" tools:targetApi="31">
+            @drawable/ic_launcher_foreground
+        </item>
+    </style>
+
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   自動バックアップから除外するファイル/ディレクトリの定義
+   Android 6.0+ の Auto Backup 用
+   参考: https://developer.android.com/identity/data/autobackup
+-->
+<full-backup-content>
+    <!--
+       現状は除外対象なし（Roomデータ含めて全てバックアップ可）
+       Phase 2 でセンシティブな情報を扱う場合は除外設定を追加する
+    -->
+</full-backup-content>
