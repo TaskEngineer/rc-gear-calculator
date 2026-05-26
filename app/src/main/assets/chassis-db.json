@@ -1,0 +1,344 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    "https://www.rcuniverse.com/forum/rc-car-general-discussions-179/2146373-internal-gear-ratios-explained.html",
+    "https://www.sodialed.com/rc-settings/transmission-ratio",
+    "https://www.rctech.net/forum/electric-road/282703-hb-cyclone-tc-final-drive-ratio.html",
+    "各メーカー公式マニュアル"
+  ],
+  "makers": {
+    "タミヤ": [
+      {
+        "id": "tamiya_tt01_tt01e",
+        "name": "TT-01 / TT-01E",
+        "internalRatio": 2.6,
+        "defaultTireMm": 63,
+        "note": "シャフト4WDツーリングのエントリー"
+      },
+      {
+        "id": "tamiya_tt02",
+        "name": "TT-02",
+        "internalRatio": 2.6,
+        "defaultTireMm": 63,
+        "note": "キット標準22T/70Tで8.27:1"
+      },
+      {
+        "id": "tamiya_tt02b",
+        "name": "TT-02B (バギー)",
+        "internalRatio": 2.6,
+        "defaultTireMm": 86,
+        "note": "TT-02ベースの2WDバギー"
+      },
+      {
+        "id": "tamiya_tb02_tbevo_iii",
+        "name": "TB-02 / TB-Evo III",
+        "internalRatio": 2.6,
+        "defaultTireMm": 63,
+        "note": "ベルト4WDのレース系"
+      },
+      {
+        "id": "tamiya_ta07_ta08_trf420",
+        "name": "TA-07 / TA-08 / TRF420",
+        "internalRatio": 1.0,
+        "defaultTireMm": 63,
+        "note": "ベルトドライブ・直結（内部減速なし）"
+      },
+      {
+        "id": "tamiya_tl01",
+        "name": "TL-01",
+        "internalRatio": 4.45,
+        "defaultTireMm": 63,
+        "note": "縦置き2ベルト4WD・大きめの内部減速"
+      },
+      {
+        "id": "tamiya_m01_m02",
+        "name": "M-01 / M-02",
+        "internalRatio": 2.44,
+        "defaultTireMm": 55,
+        "note": "Mシャーシ（FF/MR）"
+      },
+      {
+        "id": "tamiya_m03_m04",
+        "name": "M-03 / M-04",
+        "internalRatio": 3.13,
+        "defaultTireMm": 55,
+        "note": "Mシャーシ後期型"
+      },
+      {
+        "id": "tamiya_f103_f104_f1",
+        "name": "F103 / F104 (F1)",
+        "internalRatio": 1.0,
+        "defaultTireMm": 60,
+        "note": "ダイレクトドライブ"
+      },
+      {
+        "id": "tamiya_trf414m",
+        "name": "TRF414M",
+        "internalRatio": 2.13,
+        "defaultTireMm": 63,
+        "note": "TRF初期世代"
+      }
+    ],
+    "ヨコモ": [
+      {
+        "id": "yokomo_bd9_bd10_bd11_bd12",
+        "name": "BD9 / BD10 / BD11 / BD12",
+        "internalRatio": 1.0,
+        "defaultTireMm": 63,
+        "note": "ベルト4WD（内部減速なし）"
+      },
+      {
+        "id": "yokomo_yd2_rwd",
+        "name": "YD-2 (ドリフト RWD)",
+        "internalRatio": 2.5,
+        "defaultTireMm": 63,
+        "note": "リヤモーターRWDドリフト"
+      },
+      {
+        "id": "yokomo_yd4_4wd",
+        "name": "YD-4 (ドリフト 4WD)",
+        "internalRatio": 1.0,
+        "defaultTireMm": 63,
+        "note": "ベルト4WD直結"
+      },
+      {
+        "id": "yokomo_bmax2_bmax4",
+        "name": "B-MAX2 / B-MAX4 (バギー)",
+        "internalRatio": 2.6,
+        "defaultTireMm": 86,
+        "note": "1/10オフロード"
+      }
+    ],
+    "チームアソシエイテッド": [
+      {
+        "id": "associated_tc3",
+        "name": "TC3 (ツーリング)",
+        "internalRatio": 2.5,
+        "defaultTireMm": 63,
+        "note": "TC3標準内部減速比"
+      },
+      {
+        "id": "associated_tc4",
+        "name": "TC4",
+        "internalRatio": 2.5,
+        "defaultTireMm": 63,
+        "note": ""
+      },
+      {
+        "id": "associated_tc6_tc7",
+        "name": "TC6 / TC7 (ベルト)",
+        "internalRatio": 1.0,
+        "defaultTireMm": 63,
+        "note": "ベルト直結ツーリング"
+      },
+      {
+        "id": "associated_b6_x_2wd",
+        "name": "B6.x (2WDバギー)",
+        "internalRatio": 2.43,
+        "defaultTireMm": 86,
+        "note": "21レイダウントランスミッション"
+      },
+      {
+        "id": "associated_b7_2wd",
+        "name": "B7 (2WDバギー)",
+        "internalRatio": 2.43,
+        "defaultTireMm": 86,
+        "note": ""
+      },
+      {
+        "id": "associated_rc10_classic",
+        "name": "RC10 Classic",
+        "internalRatio": 2.25,
+        "defaultTireMm": 86,
+        "note": "ヴィンテージ"
+      }
+    ],
+    "TLR / Losi": [
+      {
+        "id": "tlr_22",
+        "name": "22 (初代)",
+        "internalRatio": 2.43,
+        "defaultTireMm": 86,
+        "note": "1/10 2WDバギー"
+      },
+      {
+        "id": "tlr_22_2_0_3_0_4_0_5_0",
+        "name": "22 2.0 / 3.0 / 4.0 / 5.0",
+        "internalRatio": 2.43,
+        "defaultTireMm": 86,
+        "note": "全世代共通"
+      },
+      {
+        "id": "tlr_224_4wd",
+        "name": "22-4 (4WDバギー)",
+        "internalRatio": 2.43,
+        "defaultTireMm": 86,
+        "note": ""
+      },
+      {
+        "id": "tlr_8ightx_1_8",
+        "name": "8IGHT-X (1/8バギー)",
+        "internalRatio": 2.69,
+        "defaultTireMm": 117,
+        "note": "1/8オフロード"
+      }
+    ],
+    "京商": [
+      {
+        "id": "kyosho_miniz",
+        "name": "Mini-Z (オンロード)",
+        "internalRatio": 1.0,
+        "defaultTireMm": 25,
+        "note": "ダイレクトドライブ"
+      },
+      {
+        "id": "kyosho_miniz_monster",
+        "name": "Mini-Z Monster",
+        "internalRatio": 5.0,
+        "defaultTireMm": 40,
+        "note": "Mini-Zトラック"
+      },
+      {
+        "id": "kyosho_lazer_zx",
+        "name": "Lazer ZX (バギー)",
+        "internalRatio": 2.43,
+        "defaultTireMm": 86,
+        "note": ""
+      },
+      {
+        "id": "kyosho_optima_rb",
+        "name": "Optima (RB)",
+        "internalRatio": 1.83,
+        "defaultTireMm": 86,
+        "note": "6ギヤ・ヴィンテージ"
+      }
+    ],
+    "HPI / HB": [
+      {
+        "id": "hpi_cyclone_16t",
+        "name": "Cyclone (16Tセンタープーリー)",
+        "internalRatio": 2.44,
+        "defaultTireMm": 63,
+        "note": "初代Cyclone標準（39T÷16T）"
+      },
+      {
+        "id": "hpi_cyclone_tc_18t",
+        "name": "Cyclone TC (18Tセンタープーリー)",
+        "internalRatio": 2.17,
+        "defaultTireMm": 63,
+        "note": "TCモデルは18Tでハイギヤ寄り"
+      },
+      {
+        "id": "hpi_cyclone_s_12_d4",
+        "name": "Cyclone S / 12 / D4",
+        "internalRatio": 2.17,
+        "defaultTireMm": 63,
+        "note": "近年のCycloneシリーズ（推定）"
+      },
+      {
+        "id": "hpi_micro_rs4",
+        "name": "Micro RS4",
+        "internalRatio": 1.0,
+        "defaultTireMm": 50,
+        "note": ""
+      },
+      {
+        "id": "hpi_rs4_sport",
+        "name": "RS4 Sport",
+        "internalRatio": 2.0,
+        "defaultTireMm": 63,
+        "note": ""
+      },
+      {
+        "id": "hpi_rs4_mt",
+        "name": "RS4 MT (モンスター)",
+        "internalRatio": 2.6,
+        "defaultTireMm": 110,
+        "note": ""
+      },
+      {
+        "id": "hpi_pro3",
+        "name": "Pro3",
+        "internalRatio": 2.25,
+        "defaultTireMm": 63,
+        "note": "ベルトドライブ（旧）"
+      },
+      {
+        "id": "hpi_pro4",
+        "name": "Pro4",
+        "internalRatio": 2.44,
+        "defaultTireMm": 63,
+        "note": ""
+      }
+    ],
+    "シューマッハ": [
+      {
+        "id": "schumacher_mi2_17t",
+        "name": "Mi2 (17T)",
+        "internalRatio": 2.12,
+        "defaultTireMm": 63,
+        "note": ""
+      },
+      {
+        "id": "schumacher_mi2_20t",
+        "name": "Mi2 (20T)",
+        "internalRatio": 1.8,
+        "defaultTireMm": 63,
+        "note": ""
+      },
+      {
+        "id": "schumacher_cougar_sv",
+        "name": "Cougar SV (バギー)",
+        "internalRatio": 2.43,
+        "defaultTireMm": 86,
+        "note": ""
+      }
+    ],
+    "Traxxas": [
+      {
+        "id": "traxxas_stampede_rustler_bandit",
+        "name": "Stampede / Rustler / Bandit",
+        "internalRatio": 2.72,
+        "defaultTireMm": 100,
+        "note": "2WD系共通"
+      },
+      {
+        "id": "traxxas_slash_2wd",
+        "name": "Slash 2WD",
+        "internalRatio": 2.72,
+        "defaultTireMm": 95,
+        "note": "ショートコーストラック"
+      },
+      {
+        "id": "traxxas_4tec",
+        "name": "4-TEC",
+        "internalRatio": 2.1,
+        "defaultTireMm": 63,
+        "note": "オンロード"
+      }
+    ],
+    "Xray": [
+      {
+        "id": "xray_x4",
+        "name": "X4",
+        "internalRatio": 1.0,
+        "defaultTireMm": 63,
+        "note": "ベルト直結ツーリング"
+      },
+      {
+        "id": "xray_xb4_4wd",
+        "name": "XB4 (4WDバギー)",
+        "internalRatio": 2.4,
+        "defaultTireMm": 86,
+        "note": ""
+      },
+      {
+        "id": "xray_xb2_2wd",
+        "name": "XB2 (2WDバギー)",
+        "internalRatio": 2.43,
+        "defaultTireMm": 86,
+        "note": ""
+      }
+    ]
+  }
+}
