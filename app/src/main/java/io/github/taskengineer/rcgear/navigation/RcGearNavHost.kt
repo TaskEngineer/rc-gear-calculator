@@ -10,15 +10,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import io.github.taskengineer.rcgear.feature.calc.CalcScreen
 import io.github.taskengineer.rcgear.feature.config.ConfigScreen
+import io.github.taskengineer.rcgear.feature.db.ChassisEditScreen
 import io.github.taskengineer.rcgear.feature.db.DbScreen
 import io.github.taskengineer.rcgear.feature.setups.SetupDetailScreen
 import io.github.taskengineer.rcgear.feature.setups.SetupsScreen
 
 /**
  * アプリ全体の NavHost。
- *
- * トップレベル4画面 + セッティング詳細。
- * シャーシ編集画面は Step 10 でここに追加する。
+ * トップレベル4画面 + 派生画面（セッティング詳細、シャーシ編集）。
  */
 @Composable
 fun RcGearNavHost(
@@ -60,7 +59,23 @@ fun RcGearNavHost(
             )
         }
 
-        composable(Routes.DB) { DbScreen() }
+        composable(Routes.DB) {
+            DbScreen(
+                onChassisClick = { chassisId ->
+                    navController.navigate("db/$chassisId")
+                }
+            )
+        }
+
+        composable(
+            route = Routes.CHASSIS_EDIT,
+            arguments = listOf(navArgument("chassisId") { type = NavType.StringType })
+        ) {
+            ChassisEditScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         composable(Routes.CONFIG) { ConfigScreen() }
     }
 }

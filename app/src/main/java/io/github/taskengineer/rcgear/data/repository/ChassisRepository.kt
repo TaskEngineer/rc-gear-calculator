@@ -54,6 +54,16 @@ class ChassisRepository @Inject constructor(
     }
 
     /**
+     * ID 指定で標準値（JSON 由来、上書き適用前）を取得する。
+     * シャーシ編集画面で「標準値との差分」を表示するために使う。
+     */
+    suspend fun getStandardChassisById(chassisId: String): Chassis? =
+        jsonProvider.getMakers()
+            .asSequence()
+            .flatMap { it.chassis }
+            .firstOrNull { it.id == chassisId }
+
+    /**
      * シャーシの上書きを登録・更新する。
      * すべてのフィールドが null（= 標準値と同じにしたい）の場合は、
      * 無意味なレコードを残さないようリセットとして扱う。
