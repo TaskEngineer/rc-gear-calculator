@@ -4,6 +4,7 @@ import io.github.taskengineer.rcgear.data.local.room.dao.SavedSetupDao
 import io.github.taskengineer.rcgear.data.local.room.entity.SavedSetupEntity
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,6 +62,18 @@ class SetupRepository @Inject constructor(
             )
         )
     }
+
+    /** 全セッティングの単発取得（エクスポート用） */
+    suspend fun getAllOnce(): List<SavedSetup> = observeAll().first()
+
+    /**
+     * インポートしたセッティングの復元。
+     * save() と違い createdAt / updatedAt を元データのまま保持する。
+     * id は端末固有のため 0（自動採番）で登録する。
+     * @return 採番された id
+     */
+    suspend fun restore(setup: SavedSetup): Long =
+        setupDao.insert(setup.toEntity().copy(id = 0))
 
     /** 既存セッティングの上書き保存。createdAt は維持し updatedAt のみ更新する */
     suspend fun update(setup: SavedSetup) {

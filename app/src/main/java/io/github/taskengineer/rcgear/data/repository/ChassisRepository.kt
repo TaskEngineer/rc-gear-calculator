@@ -4,8 +4,10 @@ import io.github.taskengineer.rcgear.data.local.asset.ChassisJsonProvider
 import io.github.taskengineer.rcgear.data.local.room.dao.ChassisOverrideDao
 import io.github.taskengineer.rcgear.data.local.room.entity.ChassisOverrideEntity
 import io.github.taskengineer.rcgear.domain.model.Chassis
+import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.Maker
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -85,6 +87,34 @@ class ChassisRepository @Inject constructor(
                 defaultTireMm = defaultTireMm,
                 note = note,
                 updatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    /** 全上書きの単発取得（エクスポート用） */
+    suspend fun getAllOverridesOnce(): List<ChassisOverride> =
+        overrideDao.observeAll().first().map { entity ->
+            ChassisOverride(
+                chassisId = entity.chassisId,
+                internalRatio = entity.internalRatio,
+                defaultTireMm = entity.defaultTireMm,
+                note = entity.note,
+                updatedAt = entity.updatedAt
+            )
+        }
+
+    /**
+     * インポートした上書きの復元。updatedAt を元データのまま保持して upsert する。
+     * 標準DBに存在しない chassisId のチェックは呼び出し側（ImportDataUseCase）で行う。
+     */
+    suspend fun restoreOverride(override: ChassisOverride) {
+        overrideDao.upsert(
+            ChassisOverrideEntity(
+                chassisId = override.chassisId,
+                internalRatio = override.internalRatio,
+                defaultTireMm = override.defaultTireMm,
+                note = override.note,
+                updatedAt = override.updatedAt
             )
         )
     }
