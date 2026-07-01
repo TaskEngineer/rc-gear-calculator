@@ -3,6 +3,7 @@ package io.github.taskengineer.rcgear.feature.calc
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.core.common.CalcRequestBus
 import io.github.taskengineer.rcgear.core.domain.GearCalculator
 import io.github.taskengineer.rcgear.data.repository.ChassisRepository
 import io.github.taskengineer.rcgear.data.repository.PreferencesRepository
@@ -12,6 +13,7 @@ import io.github.taskengineer.rcgear.domain.usecase.SaveSetupUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -32,7 +34,8 @@ import javax.inject.Inject
 class CalcViewModel @Inject constructor(
     private val chassisRepository: ChassisRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val saveSetupUseCase: SaveSetupUseCase
+    private val saveSetupUseCase: SaveSetupUseCase,
+    private val calcRequestBus: CalcRequestBus
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalcUiState())
@@ -84,6 +87,31 @@ class CalcViewModel @Inject constructor(
                         )
                     )
                 }
+            }
+        }
+
+        // SETUPS からの「セッティングを流し込む」要求（PLAN 5.3）
+        viewModelScope.launch {
+            calcRequestBus.pendingSetup.filterNotNull().collect { setup ->
+                // シャーシDBのロード完了を待ってから反映する
+                // （CALC 初回表示と同時に流し込まれるケースがあるため）
+                _uiState.first { !it.isLoading }
+                _uiState.update { state ->
+                    val selected = findChassis(state.makers, setup.chassisId)
+                    recalculate(
+                        state.copy(
+                            // シャーシがDBから消えていた場合（通常起きない）は選択を維持
+                            selectedChassis = selected ?: state.selectedChassis,
+                            pinion = setup.pinion,
+                            spur = setup.spur,
+                            kv = setup.kv,
+                            cells = setup.cells,
+                            tireMm = setup.tireMm
+                        )
+                    )
+                }
+                calcRequestBus.consume()
+                persistLastCalcState()
             }
         }
     }

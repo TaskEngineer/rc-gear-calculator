@@ -2,19 +2,23 @@ package io.github.taskengineer.rcgear.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import io.github.taskengineer.rcgear.feature.calc.CalcScreen
 import io.github.taskengineer.rcgear.feature.config.ConfigScreen
 import io.github.taskengineer.rcgear.feature.db.DbScreen
+import io.github.taskengineer.rcgear.feature.setups.SetupDetailScreen
 import io.github.taskengineer.rcgear.feature.setups.SetupsScreen
 
 /**
  * アプリ全体の NavHost。
  *
- * 現時点ではトップレベル4画面のみ。
- * 派生画面（セッティング詳細、シャーシ編集）は Step 9 / 10 でここに追加する。
+ * トップレベル4画面 + セッティング詳細。
+ * シャーシ編集画面は Step 10 でここに追加する。
  */
 @Composable
 fun RcGearNavHost(
@@ -27,7 +31,35 @@ fun RcGearNavHost(
         modifier = modifier
     ) {
         composable(Routes.CALC) { CalcScreen() }
-        composable(Routes.SETUPS) { SetupsScreen() }
+
+        composable(Routes.SETUPS) {
+            SetupsScreen(
+                onSetupClick = { setupId ->
+                    navController.navigate("setups/$setupId")
+                }
+            )
+        }
+
+        composable(
+            route = Routes.SETUP_DETAIL,
+            arguments = listOf(navArgument("setupId") { type = NavType.LongType })
+        ) {
+            SetupDetailScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLoadToCalc = {
+                    // 「CALC に流し込む」特殊遷移（PLAN 5.3）:
+                    // 値の受け渡しは CalcRequestBus 経由。ここではタブを CALC に切り替えるだけ
+                    navController.navigate(Routes.CALC) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
+
         composable(Routes.DB) { DbScreen() }
         composable(Routes.CONFIG) { ConfigScreen() }
     }

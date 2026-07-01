@@ -13,7 +13,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -31,20 +30,25 @@ fun RcGearApp() {
     val navController = rememberNavController()
 
     // 現在の目的地からアクティブなタブを求める。
-    // hierarchy を見るのは、将来 "setups/{setupId}" のような子画面にいる時も
-    // 親タブ（SETUPS）を選択状態にするため。
+    // "setups/{setupId}" のような派生画面でも親タブ（SETUPS）を選択状態にするため、
+    // ルート文字列の前方一致で判定する。
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = backStackEntry?.destination
+    val currentRoute = backStackEntry?.destination?.route
     val currentTab = TopLevelDestination.entries.firstOrNull { tab ->
-        currentDestination?.hierarchy?.any { it.route == tab.route } == true
+        currentRoute == tab.route || currentRoute?.startsWith("${tab.route}/") == true
     }
+    // トップレベル画面かどうか。派生画面（詳細・編集）は自前の TopAppBar
+    // （戻るボタン付き）を持つため、シェル側の TopAppBar は出さない
+    val isTopLevel = TopLevelDestination.entries.any { it.route == currentRoute }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text(currentTab?.title ?: "") }
-            )
+            if (isTopLevel) {
+                TopAppBar(
+                    title = { Text(currentTab?.title ?: "") }
+                )
+            }
         },
         bottomBar = {
             NavigationBar {
