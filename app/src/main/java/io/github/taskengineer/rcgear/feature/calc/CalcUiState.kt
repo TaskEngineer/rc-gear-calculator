@@ -27,6 +27,7 @@ data class CalcUiState(
     val cells: Int = GearCalculationInput.DEFAULT_CELLS,
     val tireMm: Int = GearCalculationInput.DEFAULT_TIRE_MM,
     val showMphAlongside: Boolean = true,
+    val animationEnabled: Boolean = true,
     val balanceFdr: Double = 7.0,
     val result: GearCalculationResult? = null,
     val isChassisSheetOpen: Boolean = false,

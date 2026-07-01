@@ -1,22 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    ランチャーアイコン foreground（Step 12）。
+    ティールのギア（リング + 12歯 + センターハブ）。
+    - adaptive icon のセーフゾーン（中心から半径33）に収まるサイズ
+    - monochrome（Android 13 テーマアイコン）でも破綻しないよう、
+      穴は fillType=evenOdd で「本当の穴」として抜いている
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!--
-       暫定アイコン: 中央にティールのギア風シェイプ
-       Step 12 で正式なアイコンに差し替える
-    -->
-    <group android:translateX="22" android:translateY="22">
-        <!-- 外周（歯車を簡略化した円） -->
-        <path
-            android:fillColor="#5dcaa5"
-            android:pathData="M32,0 L36,8 L44,4 L46,12 L54,12 L52,20 L60,24 L56,32 L62,38 L56,44 L60,52 L52,56 L54,64 L46,64 L44,72 L36,68 L32,76 L28,68 L20,72 L18,64 L10,64 L12,56 L4,52 L8,44 L2,38 L8,32 L4,24 L12,20 L10,12 L18,12 L20,4 L28,8 Z" />
-        <!-- 中央の穴 -->
-        <path
-            android:fillColor="#0a0e14"
-            android:pathData="M32,28 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
+    <!-- リング（外周 r=23、内周 r=15）+ センターハブ（r=5）を evenOdd で一体描画 -->
+    <path
+        android:fillColor="#5DCAA5"
+        android:fillType="evenOdd"
+        android:pathData="M54,31 a23,23 0 1,0 0,46 a23,23 0 1,0 0,-46 z
+                          M54,39 a15,15 0 1,0 0,30 a15,15 0 1,0 0,-30 z
+                          M54,49 a5,5 0 1,0 0,10 a5,5 0 1,0 0,-10 z" />
+
+    <!-- 歯 × 12（30度刻み）。リング外周に重ねて配置 -->
+    <group android:pivotX="54" android:pivotY="54" android:rotation="0">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="30">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="60">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="90">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="120">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="150">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="180">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="210">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="240">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="270">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="300">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="330">
+        <path android:fillColor="#5DCAA5" android:pathData="M50,26 h8 v10 h-8 z" />
     </group>
 </vector>

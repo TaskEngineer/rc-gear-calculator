@@ -54,6 +54,7 @@ class CalcViewModel @Inject constructor(
                     cells = prefs.lastCells,
                     tireMm = prefs.lastTireMm,
                     showMphAlongside = prefs.showMphAlongside,
+                    animationEnabled = prefs.animationEnabled,
                     balanceFdr = prefs.balanceFdr
                 )
             }
@@ -83,6 +84,7 @@ class CalcViewModel @Inject constructor(
                     recalculate(
                         state.copy(
                             showMphAlongside = prefs.showMphAlongside,
+                            animationEnabled = prefs.animationEnabled,
                             balanceFdr = prefs.balanceFdr
                         )
                     )

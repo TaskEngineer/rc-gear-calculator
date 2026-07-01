@@ -20,9 +20,13 @@
         <item name="windowSplashScreenBackground">@color/hud_background</item>
         <!-- スプラッシュ表示後にメインテーマへ切り替え -->
         <item name="postSplashScreenTheme">@style/Theme.RcGear</item>
-        <!-- スプラッシュアイコン（暫定、Step 12 で差し替え） -->
+        <!-- スプラッシュアイコン（ランチャーアイコンと同じギアモチーフ） -->
         <item name="windowSplashScreenAnimatedIcon" tools:targetApi="31">
             @drawable/ic_launcher_foreground
+        </item>
+        <!-- アイコン背面の円形背景。HUD のサーフェス色で軽い奥行きを出す -->
+        <item name="windowSplashScreenIconBackgroundColor" tools:targetApi="31">
+            @color/hud_surface
         </item>
     </style>
 

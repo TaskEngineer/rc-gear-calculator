@@ -1,5 +1,9 @@
 package io.github.taskengineer.rcgear.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -27,7 +31,17 @@ fun RcGearNavHost(
     NavHost(
         navController = navController,
         startDestination = Routes.CALC,
-        modifier = modifier
+        modifier = modifier,
+        // 画面遷移アニメーション（Step 12）:
+        // タブ切替はフェード + わずかな縦スライドで軽快に見せる。
+        // 派手なスライドはタブ UI では方向の意味が破綻するため使わない。
+        enterTransition = {
+            fadeIn(animationSpec = tween(200)) +
+                    slideInVertically(animationSpec = tween(200)) { it / 40 }
+        },
+        exitTransition = { fadeOut(animationSpec = tween(150)) },
+        popEnterTransition = { fadeIn(animationSpec = tween(200)) },
+        popExitTransition = { fadeOut(animationSpec = tween(150)) }
     ) {
         composable(Routes.CALC) { CalcScreen() }
 
