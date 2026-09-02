@@ -1,8 +1,12 @@
 # RC ギア比計算機 Android版 実装計画書
 
 > **Status**: MVP 実装完了（Step 1〜12）/ Phase 2 未着手
-> **Document Version**: 1.1
-> **Last Updated**: 2026-07-02
+> **Document Version**: 1.2
+> **Last Updated**: 2026-09-02
+>
+> **このドキュメントは当初計画の記録として凍結。** 実装後の実態（as-built）・既知の不具合・
+> リファクタリング方針は [HANDOFF.md](HANDOFF.md)、機能の優先順位は [ROADMAP.md](ROADMAP.md) を参照。
+> 本文の技術スタック（Kotlin 1.9 / Java 17 等）は実装時に更新されており、実際の値は HANDOFF.md §1.1 が正。
 
 ---
 

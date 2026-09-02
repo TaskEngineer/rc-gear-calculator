@@ -74,7 +74,10 @@ Data Layer    Repositories + Room / DataStore / assets JSON / SAF
   `ChassisRepository` が Flow で合成して提供する
 - 単一モジュール・パッケージによる疑似マルチモジュール構成（将来分割可能）
 
-詳細な設計・開発ステップは [docs/PLAN.md](docs/PLAN.md) を参照。
+- 当初の設計・開発ステップ: [docs/PLAN.md](docs/PLAN.md)（凍結）
+- 現状・既知の課題・リファクタリング方針: [docs/HANDOFF.md](docs/HANDOFF.md)
+- 機能ロードマップ: [docs/ROADMAP.md](docs/ROADMAP.md)
+- AI エージェント向け作業ルール: [AGENTS.md](AGENTS.md)
 
 ## 必要環境
 
@@ -106,7 +109,10 @@ app/src/main/
     └── chassis-db.json  # 内蔵シャーシDB（内部減速比データ）
 app/schemas/           # Room スキーマ（マイグレーションテスト用）
 docs/
-└── PLAN.md            # 実装計画書
+├── PLAN.md            # 実装計画書（当初計画、凍結）
+├── HANDOFF.md         # 引き継ぎ書（as-built、不具合・負債・リファクタ方針）
+└── ROADMAP.md         # 機能ロードマップ
+AGENTS.md              # AI エージェント（Codex 等）向け作業ルール
 ```
 
 ## データについて
