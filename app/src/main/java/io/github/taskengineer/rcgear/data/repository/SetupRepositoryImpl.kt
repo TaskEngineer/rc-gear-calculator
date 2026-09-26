@@ -2,6 +2,7 @@ package io.github.taskengineer.rcgear.data.repository
 
 import io.github.taskengineer.rcgear.data.local.room.dao.SavedSetupDao
 import io.github.taskengineer.rcgear.data.local.room.entity.SavedSetupEntity
+import io.github.taskengineer.rcgear.domain.common.TimeProvider
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import javax.inject.Inject
@@ -18,7 +19,8 @@ import kotlinx.coroutines.flow.map
  */
 @Singleton
 class SetupRepositoryImpl @Inject constructor(
-    private val setupDao: SavedSetupDao
+    private val setupDao: SavedSetupDao,
+    private val timeProvider: TimeProvider
 ) : SetupRepository {
 
     /** 全セッティングを更新日時の新しい順で監視する */
@@ -47,7 +49,7 @@ class SetupRepositoryImpl @Inject constructor(
         cells: Int,
         tireMm: Int
     ): Long {
-        val now = System.currentTimeMillis()
+        val now = timeProvider.now()
         return setupDao.insert(
             SavedSetupEntity(
                 name = name,
@@ -79,7 +81,7 @@ class SetupRepositoryImpl @Inject constructor(
     /** 既存セッティングの上書き保存。createdAt は維持し updatedAt のみ更新する */
     override suspend fun update(setup: SavedSetup) {
         setupDao.update(
-            setup.toEntity().copy(updatedAt = System.currentTimeMillis())
+            setup.toEntity().copy(updatedAt = timeProvider.now())
         )
     }
 

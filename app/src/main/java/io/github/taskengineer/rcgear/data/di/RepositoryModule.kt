@@ -9,7 +9,9 @@ import io.github.taskengineer.rcgear.data.repository.CalculationHistoryRepositor
 import io.github.taskengineer.rcgear.data.repository.ChassisRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.PreferencesRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.SetupRepositoryImpl
+import io.github.taskengineer.rcgear.data.system.SystemTimeProvider
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
+import io.github.taskengineer.rcgear.domain.common.TimeProvider
 import io.github.taskengineer.rcgear.domain.repository.CalculationHistoryRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
@@ -48,4 +50,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindBackupCodec(impl: JsonBackupCodec): BackupCodec
+
+    @Binds
+    @Singleton
+    abstract fun bindTimeProvider(impl: SystemTimeProvider): TimeProvider
 }

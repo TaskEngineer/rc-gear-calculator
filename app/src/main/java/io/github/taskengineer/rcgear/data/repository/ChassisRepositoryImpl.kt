@@ -3,6 +3,7 @@ package io.github.taskengineer.rcgear.data.repository
 import io.github.taskengineer.rcgear.data.local.asset.ChassisJsonProvider
 import io.github.taskengineer.rcgear.data.local.room.dao.ChassisOverrideDao
 import io.github.taskengineer.rcgear.data.local.room.entity.ChassisOverrideEntity
+import io.github.taskengineer.rcgear.domain.common.TimeProvider
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.Maker
@@ -26,7 +27,8 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class ChassisRepositoryImpl @Inject constructor(
     private val jsonProvider: ChassisJsonProvider,
-    private val overrideDao: ChassisOverrideDao
+    private val overrideDao: ChassisOverrideDao,
+    private val timeProvider: TimeProvider
 ) : ChassisRepository {
 
     /**
@@ -87,7 +89,7 @@ class ChassisRepositoryImpl @Inject constructor(
                 internalRatio = internalRatio,
                 defaultTireMm = defaultTireMm,
                 note = note,
-                updatedAt = System.currentTimeMillis()
+                updatedAt = timeProvider.now()
             )
         )
     }

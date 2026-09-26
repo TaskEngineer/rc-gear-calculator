@@ -2,6 +2,7 @@ package io.github.taskengineer.rcgear.domain.usecase
 
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.backup.BackupData
+import io.github.taskengineer.rcgear.domain.common.TimeProvider
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import javax.inject.Inject
@@ -16,13 +17,14 @@ import javax.inject.Inject
 class ExportDataUseCase @Inject constructor(
     private val setupRepository: SetupRepository,
     private val chassisRepository: ChassisRepository,
-    private val codec: BackupCodec
+    private val codec: BackupCodec,
+    private val timeProvider: TimeProvider
 ) {
 
     suspend operator fun invoke(): String =
         codec.encode(
             BackupData(
-                exportedAt = System.currentTimeMillis(),
+                exportedAt = timeProvider.now(),
                 setups = setupRepository.getAllOnce(),
                 overrides = chassisRepository.getAllOverridesOnce()
             )

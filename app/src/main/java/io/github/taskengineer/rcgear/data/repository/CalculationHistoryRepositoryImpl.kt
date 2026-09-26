@@ -2,6 +2,7 @@ package io.github.taskengineer.rcgear.data.repository
 
 import io.github.taskengineer.rcgear.data.local.room.dao.CalculationHistoryDao
 import io.github.taskengineer.rcgear.data.local.room.entity.CalculationHistoryEntity
+import io.github.taskengineer.rcgear.domain.common.TimeProvider
 import io.github.taskengineer.rcgear.domain.repository.CalculationHistoryRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,7 +16,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class CalculationHistoryRepositoryImpl @Inject constructor(
-    private val historyDao: CalculationHistoryDao
+    private val historyDao: CalculationHistoryDao,
+    private val timeProvider: TimeProvider
 ) : CalculationHistoryRepository {
 
     override suspend fun record(
@@ -30,7 +32,7 @@ class CalculationHistoryRepositoryImpl @Inject constructor(
                 pinion = pinion,
                 spur = spur,
                 topSpeedKmh = topSpeedKmh,
-                createdAt = System.currentTimeMillis()
+                createdAt = timeProvider.now()
             )
         )
     }
