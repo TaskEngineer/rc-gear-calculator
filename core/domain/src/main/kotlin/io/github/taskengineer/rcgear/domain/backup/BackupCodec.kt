@@ -1,21 +1,23 @@
 package io.github.taskengineer.rcgear.domain.backup
 
+import io.github.taskengineer.rcgear.domain.model.Car
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
+import io.github.taskengineer.rcgear.domain.model.SetupSheetWithValues
 
 /**
- * バックアップ 1 ファイル分の中身（REF-2 / S-5）。
+ * バックアップ 1 ファイル分の中身（REF-2 / S-5、M-6 で v2 化）。
  *
  * ワイヤ形式（JSON）とは独立したドメイン表現。
  *
- * [legacySetups] は **v1 ファイルを読んだときだけ**中身が入る。
- * v1 の「保存セッティング」は M-3 で車 + シートに置き換わったので、
- * 書き出す側がこれを埋めることはない。v2 の形（cars / sheets / userChassis）への
- * 変換は M-6 の v1 → v2 インポータで入る。
+ * v1 ファイルを読んだ場合、[LegacyBackupConverter] が「1 セッティング = 1 台 + 1 シート」に
+ * 変換した結果がそのまま [cars] / [sheets] に入る。**UseCase から見ると v1 も v2 も同じ形**で、
+ * 版の違いを知っているのは codec だけ。
  */
 data class BackupData(
     val exportedAt: Long,
-    val overrides: List<ChassisOverride> = emptyList(),
-    val legacySetups: List<LegacySavedSetup> = emptyList()
+    val cars: List<Car> = emptyList(),
+    val sheets: List<SetupSheetWithValues> = emptyList(),
+    val overrides: List<ChassisOverride> = emptyList()
 )
 
 /**

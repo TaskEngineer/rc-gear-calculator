@@ -177,19 +177,20 @@ class ConfigViewModel @Inject constructor(
     /**
      * インポート結果のメッセージを組み立てる（S-11）。
      *
-     * 「取り込み完了: 上書き 2件（不明シャーシ 1件）」のように入れ子になるので、
+     * 「取り込み完了: 車 1台 / シート 3枚（値が不正な項目 1件を除外）/ 上書き 2件」のように
+     * 入れ子になるので、
      * [UiText] を書式引数に入れて画面側で解決させる。件数が 0 の注記は出さない。
      */
     private fun importedMessage(result: ImportDataUseCase.Result.Success): UiText =
         UiText.Res(
             R.string.config_import_done,
             listOf(
+                result.importedCars,
+                notes(unknownChassis = result.skippedCars),
+                result.importedSheets,
+                notes(noCar = result.skippedSheets, droppedValues = result.droppedValues),
                 result.importedOverrides,
-                notes(
-                    unknownChassis = result.skippedOverrides,
-                    invalid = result.invalidOverrides,
-                    legacyPending = result.pendingLegacySetups
-                )
+                notes(unknownChassis = result.skippedOverrides, invalid = result.invalidOverrides)
             )
         )
 
@@ -197,11 +198,15 @@ class ConfigViewModel @Inject constructor(
     private fun notes(
         unknownChassis: Int = 0,
         invalid: Int = 0,
-        legacyPending: Int = 0
+        noCar: Int = 0,
+        droppedValues: Int = 0
     ): UiText {
         val parts = buildList {
-            if (legacyPending > 0) {
-                add(UiText.Res(R.string.config_import_note_legacy_pending, listOf(legacyPending)))
+            if (noCar > 0) {
+                add(UiText.Res(R.string.config_import_note_no_car, listOf(noCar)))
+            }
+            if (droppedValues > 0) {
+                add(UiText.Res(R.string.config_import_note_dropped_values, listOf(droppedValues)))
             }
             if (unknownChassis > 0) {
                 add(UiText.Res(R.string.config_import_note_unknown_chassis, listOf(unknownChassis)))
