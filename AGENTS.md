@@ -19,12 +19,14 @@
 # Windows / PowerShell。JAVA は PATH に無いので JAVA_HOME を明示する
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 .\gradlew.bat :app:assembleDebug --console=plain      # デバッグビルド
-.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 79 件）
+.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 87 件）
 .\gradlew.bat :core:domain:test --console=plain       # ドメインのみ（Android を経由しないので速い）
 .\gradlew.bat :app:lintDebug --console=plain          # Android Lint
 ```
 
-- 使用 JDK は Android Studio 同梱の JBR（Java 21）。`gradle.properties` の `org.gradle.java.home` も同じパスを指す。
+- 使用 JDK は Android Studio 同梱の JBR（Java 21）。
+  **`gradle.properties` に `org.gradle.java.home` は書かない**（BUG-5 / S-2 で削除済み。開発機固有の絶対パスは
+  他環境と CI で即失敗する）。上のように `JAVA_HOME` を渡すか、`~/.gradle/gradle.properties` に各自で書く。
 - **このマシン固有の既知問題**: Gradle 起動時に
   `java.io.IOException: Unable to establish loopback connection` が出ることがある。
   原因は `%LOCALAPPDATA%\Temp` 配下での AF_UNIX ソケット作成失敗。次を設定してから再実行する。
@@ -43,7 +45,9 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 4. Room の Entity を変えたら `version` を上げ、**`Migration` を書くか、移行手段をドキュメント化する**。
    `app/schemas/` に新しいスキーマ JSON が生成されていることを確認する。
    ※ セッティングシート化（Phase 2）は破壊的再作成 + v1 JSON の再インポートという
-   手動移行を選んだため、この項に例外を設けている（`docs/HANDOFF.md` 参照）。
+   手動移行を選んだため、この項に例外を設けている（`docs/HANDOFF.md` §5.2 参照）。
+   ただし例外は **v1 → v2 の 1 回だけ**（`fallbackToDestructiveMigrationFrom(1)`）。
+   v2 以降は Migration を書く。`fallbackToDestructiveMigration()`（無引数）に戻さないこと。
    公開に踏み切る場合はこの例外を撤回すること
 5. UI 文言を追加したら、可能な限り `res/values/strings.xml` に置く（現状ハードコードが多いが、増やさない）
 
@@ -90,7 +94,9 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 
 ## 5. コーディング規約
 
-- Kotlin 公式スタイル（`kotlin.code.style=official`）。ktlint / detekt は未導入（S-3 で導入予定）。
+- Kotlin 公式スタイル（`kotlin.code.style=official`）。**ktlint 導入済み**（S-3。Gradle plugin 12.1.1、設定は `.editorconfig`）。
+  `.\gradlew.bat ktlintFormat` で整形、`ktlintCheck` で検証。CI の最初のステップでもある。detekt は未導入。
+  ktlint の設定を変えたときは `gradlew --stop` を挟んで確認する（ワーカーが `.editorconfig` の解決結果を抱える）。
 - テストは Fake を優先する（`app/src/test/**/fake/`）。MockK は Fake を書くのが割に合わないときだけ。
   Fake は本物の制約（ユニーク制約・並び順）を再現すること。それが Fake を使う理由なので。
 - **instrumented テストのメソッド名にスペースを入れない。** minSdk 26（DEX < 040）では

@@ -1,6 +1,6 @@
 # 引き継ぎ書（HANDOFF）— RcGear Android
 
-> **Status**: MVP 完了 + **セッティングシート化 Phase 0（地固め）完了**。Phase 1 未着手。
+> **Status**: MVP 完了 + **セッティングシート化 Phase 0（地固め）完了 + 外部レビュー指摘の反映済み**（§5.5）。Phase 1 未着手。
 > **Last Updated**: 2026-09-26
 > **対象読者**: 次にこのリポジトリを扱う AI エージェントと、その指示を出す本人。
 >
@@ -20,10 +20,10 @@
 | 実装範囲 | PLAN Step 1〜12 完了（CALC / SETUPS / DB / CONFIG、画像エクスポート、アイコン、R8） |
 | モジュール | `:app`（Android）＋ `:core:domain`（純 Kotlin JVM） |
 | ビルド | `:app:assembleDebug` 成功（2026-09-26 確認） |
-| 単体テスト | **79 件成功**（`:core:domain` 30 / `:app` 49）。GearCalculator・入力値検証・表示整形・UseCase 3 本・CalcViewModel |
-| Instrumented / UI テスト | DAO テスト 5 件を用意済み（`app/src/androidTest/`）。**未実行**（実機 / エミュレータが要る） |
+| 単体テスト | **87 件成功**（`:core:domain` 30 / `:app` 57）。GearCalculator・入力値検証・表示整形・UseCase 3 本・CalcViewModel・JsonBackupCodec |
+| Instrumented / UI テスト | DAO テスト 6 件を用意済み（`app/src/androidTest/`）。`assembleDebugAndroidTest` は成功するが **端末上での実行は未検証**（実機 / エミュレータが要る） |
 | Lint / 静的解析 | **ktlint 導入済み**（`ktlintCheck` 緑）。Android Lint も CI で実行 |
-| CI | **あり**（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint） |
+| CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**ただし一度も実行されていない**（このブランチが未 push。`origin/main` は 698fea4 のまま）。実環境での成功は未確認 |
 | リリース署名 | 未設定。`versionCode = 1`、`versionName = 0.1.0` |
 | スクリーンショット | README に TODO のまま（`docs/screenshots/` 未作成） |
 | ライセンス | TBD |
@@ -243,21 +243,63 @@ Phase 2 でテーブルを作り直す（`cars` / `setup_sheets` / `setup_values
 - 破壊的変更の許可は「データ消失」ではなく「移行コードの簡略化」に使う
 
 このため **AGENTS.md の DoD #4 を「Migration を書く、または移行手段をドキュメント化する」に緩めた**。
-`fallbackToDestructiveMigration()` は S-10 で追加済み（それ以前は version を上げるとワイプではなくクラッシュした）。
 **公開に踏み切る場合はこの例外を撤回すること。**
+
+#### 破壊的再作成の範囲は v1 → v2 に限定する（Phase 0 レビューで修正）
+
+S-10 で入れた `fallbackToDestructiveMigration()`（無引数）は「**将来の全バージョン**で
+移行漏れを黙ってデータ消失に変える」設定だった。手動移行を選んだのは v1 からの 1 回だけなので、
+`fallbackToDestructiveMigrationFrom(1)` に変更した（`data/di/DatabaseModule.kt`）。
+v2 以降で Migration を書き忘れた場合は起動時に `IllegalStateException` で落ちる ＝ 気づける。
+
+#### 手動移行で戻らないもの（移行手順に必須）
+
+エクスポート JSON に入るのは **保存セッティングとシャーシ上書きだけ**（`ExportDataDto`）。
+v1 → v2 の作り直しで、次は戻らない:
+
+| 失うもの | 保存先 | 扱い |
+|---|---|---|
+| 計算履歴（`calculation_history`） | Room | Phase 2 の M-3 でテーブルごと削除する予定なので捨てて構わない（DEBT-8） |
+| テーマ / mph 併記 / 基準 FDR / 前回入力値 | DataStore | **Room を作り直しても消えない**（別ストア）。ただしアプリのデータ削除・再インストールを挟むと消える。手で設定し直せる 5 項目なので復元手段は作らない |
+
+つまり移行手順は「① CONFIG でエクスポート → ② アプリのデータを消さずに v2 を入れる
+（Room だけが作り直される）→ ③ v2 インポータで JSON を戻す」。
+②で端末のアプリデータを丸ごと消すと DataStore の表示設定も失うので、消さないこと。
 
 ### 5.3 フィールド定義は Kotlin のレジストリ
 
 40〜80 項目を固定カラムで持つと 1 項目追加のたびに 9 箇所を直すことになるので、
-値は `(sheetId, fieldKey)` の EAV で持ち、**項目の定義（ラベル・型・範囲・UI）は
+値は `(sheetId, fieldKey)` の EAV で持ち、**項目の定義（キー・型・範囲・単位・並び）は
 `:core:domain` の Kotlin `object`（`TouringSetupSchema`）に置く**。
 
 `assets/setup-schema.json` 案は却下した。Kotlin 定数と JSON で二重の真実になり、
 ラベルが `strings.xml` の外に出て英語化の手順から外れるため。
-Kotlin レジストリならキーの誤りはコンパイルエラーで、ラベルは `@StringRes` のまま。
+Kotlin レジストリならキーの誤りはコンパイルエラーになる。
 
 完全型付け（セクションごとの data class）も却下。60 項目ぶんのフィールド + Composable +
 バリデーション + 比較処理の手書きになり、避けたかった爆発そのもの。
+
+#### ラベルはレジストリに持たせない（Phase 0 レビューで修正）
+
+当初この節には「ラベルは `@StringRes` のまま」と書いていたが、**成立しない**。
+`R.string` を生成するのは `:app` であり、`:core:domain` は純 Kotlin JVM モジュールなので
+`R` を参照できない（`androidx.annotation.StringRes` 自体は JVM artifact なので付けられるが、
+**渡せる ID が無い**）。矛盾したまま Phase 1 に入ると、`:core:domain` に `:app` を
+逆依存させるか、レジストリを `:app` に逃がすかの二択を実装中に迫られる。
+
+決着: **定義は domain、ラベルの解決は `:app`。**
+
+- `:core:domain` … `SetupField`（`key` / 型 / 範囲 / 単位 / 並び / 既定値）と
+  `TouringSetupSchema`。検証・差分・比較はここで完結する（Android 不要）
+- `:app` … `feature/sheet/SetupFieldLabels.kt` に
+  `@StringRes fun SetupField.labelRes(): Int` を置き、`strings.xml` を引く
+- 漏れ防止 … 「レジストリの全フィールドがラベルを持つ」ことを `:app` の単体テストで検証する
+  （`TouringSetupSchema.allFields.forEach { assertNotEquals(0, it.labelRes()) }`）。
+  フィールド追加時にラベルを忘れるとテストが落ちる
+
+レビューで示された「レジストリ自体を `:app` に置く」案は採らない。検証と差分処理は domain 側の
+仕事であり、レジストリを `:app` に置くと domain が型・範囲を再宣言することになって
+二重の真実が戻ってくる。分ける境界は「項目の定義」と「文言」であって、「項目」ではない。
 
 ### 5.4 Phase 0 で見つかった、記載の無かった問題
 
@@ -269,6 +311,20 @@ Kotlin レジストリならキーの誤りはコンパイルエラーで、ラ�
 | `gradlew` に実行ビットが無い（100644）。Windows でしか動かしていなかったため気づいていなかった | S-4 で 100755 に。`.gitattributes` で `eol=lf` も固定 |
 | instrumented テストのメソッド名にスペースを入れると `dexBuilder` が落ちる（minSdk 26 は DEX < 040）。JVM 単体テストとルールが違う | S-10 で踏んだ。AGENTS.md §5 に明記 |
 | ktlint の既定ルールのうち 4 つ（`no-multi-spaces` / `argument-list-wrapping` / `function-signature` / `discouraged-comment-location`）が、意図的な桁揃え・表形式のコードを壊す | S-3 で無効化。理由は `.editorconfig` に記載 |
+
+### 5.5 Phase 0 レビュー（2026-09-26）の指摘と決着
+
+Phase 0 完了後に受けた外部レビュー。Phase 1 に入る前に処理した。
+
+| 指摘 | 決着 |
+|---|---|
+| 高: `fallbackToDestructiveMigration()` の対象が全バージョンで、将来の移行漏れもデータ消失になる | `fallbackToDestructiveMigrationFrom(1)` に限定（§5.2） |
+| 高: `ExportDataDto.schemaVersion` の既定値が `CURRENT_SCHEMA_VERSION` に連動しており、v2 を出すと `schemaVersion` キーの無い旧ファイルを v2 と誤認する | 既定値を `OMITTED_SCHEMA_VERSION = 1`（不変）に分離し、書き出し側は版を明示。S-6 以前の実形式を `JsonBackupCodecTest` のゴールデンデータとして固定（codec の形式テストはこれまで 0 件だった） |
+| 高: Kotlin レジストリ案が `:core:domain` で `@StringRes` を持つ前提になっており、モジュール境界と矛盾する | 定義は domain、ラベル解決は `:app`（§5.3） |
+| 中: CI が一度も実行されていない / instrumented テストが端末上で未実行 | **未解決**。CI はブランチを push した時点で判明する。DAO テストの実行は実機かエミュレータが必要（§1 の表に明記） |
+| 中: DAO テストの「一括挿入は 1 トランザクション」が正常系しか見ておらず、失敗時のロールバックを検証していない | UNIQUE 違反で全件ロールバックすることを確認するテストを追加（androidTest 6 件目） |
+| 低: `AGENTS.md` に「`org.gradle.java.home` はコミット済み」「ktlint 未導入」という古い記述が残っている | 両方修正 |
+| 手動移行で DataStore の表示設定と計算履歴が戻らない点が未記載 | §5.2 に表で明記 |
 
 ## 6. 運用メモ
 
