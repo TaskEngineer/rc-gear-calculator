@@ -24,6 +24,18 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    /**
+     * Database の生成。
+     *
+     * fallbackToDestructiveMigration について（S-10）:
+     * Migration を 1 つも登録していない状態で `version` を上げると、Room は
+     * ワイプではなく IllegalStateException で落ちる。本アプリは未公開・
+     * ユーザーは開発者本人のみで、データの持ち出しは CONFIG の JSON
+     * エクスポートで担保されているため、スキーマ変更時は作り直しを選ぶ。
+     *
+     * 公開する場合はここを外し、Migration と MigrationTestHelper による
+     * テスト（ROADMAP P-7）を用意すること。
+     */
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): RcGearDatabase =
@@ -31,7 +43,9 @@ object DatabaseModule {
             context,
             RcGearDatabase::class.java,
             RcGearDatabase.DATABASE_NAME
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     fun provideSavedSetupDao(db: RcGearDatabase): SavedSetupDao = db.savedSetupDao()

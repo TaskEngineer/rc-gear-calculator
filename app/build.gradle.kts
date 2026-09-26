@@ -120,6 +120,9 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    // Room の MigrationTestHelper / DAO テスト用。schemas/ は androidTest の assets に登録済み
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 
     // Google Fonts を Compose で使うための依存
     // （カタログ経由、BOM がバージョンを管理）
