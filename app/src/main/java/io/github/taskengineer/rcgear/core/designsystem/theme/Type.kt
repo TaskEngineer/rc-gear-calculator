@@ -4,31 +4,29 @@ import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
-import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
 import io.github.taskengineer.rcgear.R
 
 // ============================================================
-// Google Fonts プロバイダ設定
+// 等幅フォント（アプリに同梱）
 // ============================================================
-// 端末の Google Play サービス経由でフォントを取得する仕組み。
-// 初回のみダウンロードされ、以降はキャッシュから使われる。
-// res/values/font_certs.xml にプロバイダ証明書が必要。
+// 以前は Google Fonts のダウンローダブルフォントで Roboto Mono を取得していたが、
+// これは「完全オフライン」という設計方針と原理的に矛盾していた（DEBT-13 / S-8）。
+// Play サービス非搭載の端末・初回起動時にネットワークが無い端末では、
+// 何も告げずにプロポーショナルフォントへフォールバックし、HUD の桁が揃わない。
+//
+// 検証して様子を見るより同梱する方が安上がりなので、静的 TTF を res/font/ に置く。
+// ライセンス: SIL Open Font License 1.1
+//   本文は assets/licenses/RobotoMono-OFL.txt に同梱（OFL の頒布条件）
+//   出典: https://github.com/googlefonts/RobotoMono
 
-private val googleFontProvider = GoogleFont.Provider(
-    providerAuthority = "com.google.android.gms.fonts",
-    providerPackage   = "com.google.android.gms",
-    certificates      = R.array.com_google_android_gms_fonts_certs
-)
-
-// 数字表示用 (Roboto Mono = 等幅)
 private val RobotoMono = FontFamily(
-    Font(googleFont = GoogleFont("Roboto Mono"), fontProvider = googleFontProvider, weight = FontWeight.Normal),
-    Font(googleFont = GoogleFont("Roboto Mono"), fontProvider = googleFontProvider, weight = FontWeight.Medium),
-    Font(googleFont = GoogleFont("Roboto Mono"), fontProvider = googleFontProvider, weight = FontWeight.Bold)
+    Font(R.font.roboto_mono_regular, FontWeight.Normal),
+    Font(R.font.roboto_mono_medium, FontWeight.Medium),
+    Font(R.font.roboto_mono_bold, FontWeight.Bold)
 )
 
 // 通常テキスト用 (Roboto = プロポーショナル、Android標準)

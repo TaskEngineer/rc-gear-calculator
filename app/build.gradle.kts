@@ -124,7 +124,4 @@ dependencies {
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.kotlinx.coroutines.test)
 
-    // Google Fonts を Compose で使うための依存
-    // （カタログ経由、BOM がバージョンを管理）
-    implementation(libs.androidx.compose.ui.text.google.fonts)
 }
