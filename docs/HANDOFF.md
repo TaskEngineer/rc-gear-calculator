@@ -1,6 +1,6 @@
 # 引き継ぎ書（HANDOFF）— RcGear Android
 
-> **Status**: MVP 完了 + **セッティングシート化 Phase 0（地固め）完了 + 外部レビュー指摘の反映済み**（§5.5）。Phase 1 未着手。
+> **Status**: MVP 完了 + **セッティングシート化 Phase 0（地固め）/ Phase 1（共有 UI・文言・ナビの土台）完了**。Phase 2 未着手。
 > **Last Updated**: 2026-09-26
 > **対象読者**: 次にこのリポジトリを扱う AI エージェントと、その指示を出す本人。
 >
@@ -17,10 +17,11 @@
 
 | 項目 | 状態 |
 |---|---|
-| 実装範囲 | PLAN Step 1〜12 完了（CALC / SETUPS / DB / CONFIG、画像エクスポート、アイコン、R8） |
+| 実装範囲 | PLAN Step 1〜12 完了（CALC / SETUPS / DB / CONFIG、画像エクスポート、アイコン、R8）+ Phase 1 の土台 |
+| 共有 UI | `core/designsystem/component/` に 13 部品（全てに `@Preview`）。文言は `strings.xml`（約 110 件） |
 | モジュール | `:app`（Android）＋ `:core:domain`（純 Kotlin JVM） |
 | ビルド | `:app:assembleDebug` 成功（2026-09-26 確認） |
-| 単体テスト | **87 件成功**（`:core:domain` 30 / `:app` 57）。GearCalculator・入力値検証・表示整形・UseCase 3 本・CalcViewModel・JsonBackupCodec |
+| 単体テスト | **95 件成功**（`:core:domain` 30 / `:app` 65）。GearCalculator・入力値検証・表示整形・UseCase 3 本・CalcViewModel・SetupDetailViewModel・JsonBackupCodec |
 | Instrumented / UI テスト | DAO テスト **6 件成功**（`app/src/androidTest/`）。2026-09-26 に AVD `Pixel_8`（API 34）で `connectedDebugAndroidTest` 実行、failures 0 / errors 0。UI テストは未着手 |
 | Lint / 静的解析 | **ktlint 導入済み**（`ktlintCheck` 緑）。Android Lint も CI で実行 |
 | CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**2026-09-26 の PR #1 で初回実行、全ステップ緑**（5m14s）。instrumented テストは CI に入っていない（エミュレータが要るため。§6 参照） |
@@ -112,13 +113,13 @@ PLAN.md が掲げた「Domain は Pure Kotlin、依存方向は UI → Domain �
 | DEBT-1 | `domain/usecase` が `data.repository.*`（具象クラス）と `data.local.file.dto.ExportDataDto` を直接 import。Domain → Data の逆依存 | **解消（S-5）** `domain/repository/` に interface、`data/repository/*Impl` を `@Binds` で束ねた。エクスポート DTO への依存は `BackupCodec` で断った |
 | DEBT-2 | `domain/model/UserPreferences` が `core.designsystem.theme.ThemeMode`（UI 層の enum）を参照 | **解消（S-5）** `ThemeMode` を `domain/model/` へ移動 |
 | DEBT-3 | 計算ロジックが `core/domain/GearCalculator` にあり、`domain/` と二重パッケージ。テストも `core/domain` 配下 | **解消（S-5 / S-9）** `domain/calculator/GearCalculator` に統合し、`:core:domain` モジュールへ |
-| DEBT-4 | UI 文言・エラー文言が Composable と ViewModel にハードコード（約 130 箇所）。`strings.xml` は `app_name` のみ。ViewModel が日本語文字列を組み立てている（`CalcViewModel.savedMessage`、`ConfigViewModel.message` など） | **未着手**（Phase 1 の S-11）。セッティングシートのフィールドラベルを増やす前に片付ける必要がある |
+| DEBT-4 | UI 文言・エラー文言が Composable と ViewModel にハードコード（約 130 箇所）。`strings.xml` は `app_name` のみ。ViewModel が日本語文字列を組み立てている（`CalcViewModel.savedMessage`、`ConfigViewModel.message` など） | **解消（S-11 / c8fa274）** 全て `strings.xml` へ。ViewModel は `UiText`（リソース ID + 引数）を持つ。残る日本語リテラルは `@Preview` のサンプルのみ |
 | DEBT-5 | Repository が具象クラスで interface が無い。ViewModel / UseCase のテストで MockK に頼ることになる（MockK は依存に入っている） | **解消（S-5 / S-6）** interface 化し、`app/src/test/**/fake/` に Fake 4 種を用意。Fake は本物の制約（ユニーク名・並び順）を再現する |
-| DEBT-6 | `CalcRequestBus` はアプリスコープの可変グローバル状態。「流し込み」以外の用途が増えると追跡困難 | **未着手**（Phase 1 の U-3）。用途が 4 つに増える予定なので nav 引数 + `SavedStateHandle` に置換する |
-| DEBT-7 | ルートが文字列（`"setups/$setupId"`）。Navigation 2.8 の型安全ルート（`@Serializable` data class）に移行可能 | **未着手**（Phase 1 の S-12） |
+| DEBT-6 | `CalcRequestBus` はアプリスコープの可変グローバル状態。「流し込み」以外の用途が増えると追跡困難 | **解消（U-3 / 8bd116d）** ルート引数 `Calc(setupId)` に置換しクラスを削除。プロセス death で値が消える未記載の不具合も同時に解消（§5.6） |
+| DEBT-7 | ルートが文字列（`"setups/$setupId"`）。Navigation 2.8 の型安全ルート（`@Serializable` data class）に移行可能 | **解消（S-12 / acbd038）** `@Serializable` ルート + `hasRoute()` 判定。引数の読み出しだけ自前（§5.6） |
 | DEBT-8 | `calculation_history` テーブルは Insert のみで読み出し経路が無い。UI（ROADMAP F-1）を作るか、テーブルごと削除するか決める | **削除で決着予定**（Phase 2 の M-3）。セッティングシート自体がこれより良い履歴になるため |
 | DEBT-9 | `PreferencesRepository` は `UserPreferencesDataSource` の透過的ラッパー。層を揃える以外の価値が無い | **そのまま**。interface 化で層は揃った。実害が無いので放置 |
-| DEBT-10 | `CalcViewModel.init` に 3 本の `collect` が並び、`recalculate` は例外を投げうる（BUG-1/2 の受け口）。状態遷移がテストしづらい | **部分解消**。`recalculate` が例外を投げなくなり（S-1'）、CalcViewModel のテストも入った（S-6）。`update {}` 内での再入と `first { !it.isLoading }` の永久サスペンドは Phase 1 の U-4 で対応 |
+| DEBT-10 | `CalcViewModel.init` に 3 本の `collect` が並び、`recalculate` は例外を投げうる（BUG-1/2 の受け口）。状態遷移がテストしづらい | **部分解消**。`recalculate` が例外を投げなくなり（S-1'）、CalcViewModel のテストも入った（S-6）。`update {}` 内の再計算は **解消（U-4 / 28c437b）** `setState()` に集約。`first { !it.isLoading }` は U-3 でバスごと消えた |
 | DEBT-11 | `ExportDataUseCase` / `ImportDataUseCase` が `System.currentTimeMillis()` を直接呼ぶ。Repository も同様。時刻をテストで固定できない | **解消（S-6）** `TimeProvider` を注入。`IdGenerator` は採番する行がまだ無いので Phase 2 で追加する |
 | DEBT-12 | `libs.versions.toml` にコメント「既存の行はそのまま、以下を追加」が残っている（作業メモの残骸） | **解消（S-10 の編集で消えた）** |
 | DEBT-13 | `res/font/` が空。Google Fonts（`ui-text-google-fonts`）経由で Roboto Mono を取得している可能性があり、**完全オフライン** の方針と矛盾しうる。ネットワーク無し・初回起動の端末で等幅フォントが出るか確認する | **解消（S-8）** Roboto Mono を `res/font/` に同梱し `ui-text-google-fonts` と `font_certs.xml` を削除。ライセンスは `assets/licenses/RobotoMono-OFL.txt` |
@@ -168,6 +169,8 @@ REF-4（文言リソース化）と REF-5（型安全ルート）はセッティ
 
 ### REF-4: UI 文言のリソース化（DEBT-4、ROADMAP F-4 英語化の前提）
 
+**[完了: S-11 / c8fa274]** 実装した形は §5.6 を参照（`UiText` は当初案の `UiMessage` より汎用にした）。
+
 - 手順: (1) `strings.xml` に日本語を全て移す → (2) Composable は `stringResource()` → (3) ViewModel は文字列ではなく
   `sealed interface UiMessage { data class SetupSaved(val name: String) ... }` を UiState に載せ、Composable 側で文字列に解決する。
 - `DbFilter.label`、`TopLevelDestination.title` のような enum に日本語を持たせている箇所は `@StringRes` に変える。
@@ -178,6 +181,8 @@ REF-4（文言リソース化）と REF-5（型安全ルート）はセッティ
 - 検証: 上記 grep のヒットが KDoc / コメント以外でゼロ。
 
 ### REF-5: ナビゲーションの型安全化（DEBT-7）
+
+**[完了: S-12 / acbd038]** `SavedStateHandle.toRoute<T>()` だけは使えなかった。理由は §5.6。
 
 - Navigation Compose 2.8 の `@Serializable` ルート（`data object Calc`、`data class SetupDetail(val setupId: Long)`）に置き換える。
 - `RcGearApp` の「派生画面で親タブを選択状態にする」判定は `hasRoute<>()` に変える。
@@ -325,6 +330,85 @@ Phase 0 完了後に受けた外部レビュー。Phase 1 に入る前に処理�
 | 中: DAO テストの「一括挿入は 1 トランザクション」が正常系しか見ておらず、失敗時のロールバックを検証していない | UNIQUE 違反で全件ロールバックすることを確認するテストを追加（androidTest 6 件目） |
 | 低: `AGENTS.md` に「`org.gradle.java.home` はコミット済み」「ktlint 未導入」という古い記述が残っている | 両方修正 |
 | 手動移行で DataStore の表示設定と計算履歴が戻らない点が未記載 | §5.2 に表で明記 |
+
+### 5.6 Phase 1 の設計判断（2026-09-26）
+
+Phase 1（S-12 / U-3 / U-4 / U-1 / U-2 / S-11）で決めたこと。
+実施順は依存に従い S-12 → U-3 → U-4 → U-1 → U-2 → S-11 にした
+（文言リソース化を最後にすると、移設で動いたコードを 1 回で掃ける）。
+
+#### `SavedStateHandle.toRoute<T>()` は使わない
+
+型安全ルート（S-12）の受け取りは本来 `savedStateHandle.toRoute<SetupDetail>()` だが、
+**これは内部で `android.os.Bundle` を組み立てる**（`RouteDecoder` → `bundleOf`）。
+Robolectric を入れていない JVM 単体テストでは
+`Method putString in android.os.BaseBundle not mocked` で落ちる。
+ViewModel のテストを Robolectric 抜きで書き続けるほうが大事なので、
+`navigation/Routes.kt` に `SavedStateHandle.calcRoute()` などの復元関数を置き、
+キーを直接読む（`SavedStateHandle` には NavType が put した生の値が入っている）。
+
+危ないのは「キー名 = ルートクラスのプロパティ名」という暗黙の対応で、
+**その対応をルート定義と同じファイルに閉じ込める**のがこの関数群の役目。
+Robolectric を入れる日が来たら `toRoute<T>()` に戻してよい。
+
+#### 流し込み遷移で `restoreState = true` を使わない
+
+`SetupDetail` →「CALC に流し込む」は `navigate(Calc(setupId = ...))` で引数を渡す。
+ここでタブ切替と同じ `popUpTo(startDestination) { saveState = true } + restoreState = true` を
+付けると、**保存済みの CALC エントリ（＝古い引数）が復元されて新しい `setupId` が無視される**。
+`popUpTo<Calc> { inclusive = true }` で既存の CALC エントリを置き換える形にした。
+
+#### `ScreenEvents` は「バスを消してバスを足した」のではない
+
+U-3 で `CalcRequestBus`（アプリスコープの `@Singleton`）を消し、U-2 で `ScreenEvents`
+（`Channel` ベース）を足したので一見矛盾するが、性質が違う:
+
+| | `CalcRequestBus`（削除） | `ScreenEvents`（追加） |
+|---|---|---|
+| 寿命 | アプリ全体・シングルトン | ViewModel 1 つに 1 つ |
+| 送り手と受け手 | 別の画面（SETUPS → CALC） | 同じ画面（VM → その画面） |
+| プロセス death | 値が消える | 状態ではないので復元不要 |
+
+「戻る」を UiState の Boolean（`isDone` / `isDeleted` / `notFound`）で表すのをやめたのは、
+戻った後も true のまま残り、再コンポーズの経路によっては 2 回 pop しうるため。
+バッファ付き Channel なので、`init` で即 emit する「対象が見つからない」も取りこぼさない。
+
+#### `UiText`: ViewModel は文言ではなくリソース ID を持つ
+
+当初案の `sealed interface UiMessage`（メッセージごとにケースを作る）ではなく、
+`UiText.Res(id, args)` / `Raw` / `Joined` / `Empty` の 4 種にした。
+ケースを増やさずに済み、**引数に `UiText` を入れると再帰的に解決される**ので
+「取り込み完了: セッティング 3件（同名スキップ 1件）/ 上書き 2件」のような入れ子も組める。
+テストは文言ではなく `UiText.Res(R.string.calc_saved, listOf("Rd1"))` の同値で書ける。
+
+例外を 2 つ置いた:
+
+- **常に同じ a11y ラベル**（戻る矢印、ステッパーの ±）は designsystem の部品内で
+  `stringResource` する。呼び出し側に毎回書かせると、書き忘れた画面だけ読み上げが無音になる
+- **`@Preview` のサンプルデータ**は日本語のままにする。出荷されない開発用の値で、
+  翻訳対象ではない。HANDOFF の grep チェックもこの 2 つを例外として読むこと
+
+`ThemeMode` のラベルは `:core:domain`（純 Kotlin、`R` を参照できない）に enum があるため、
+対応表を `:app` 側の拡張プロパティに置いた。§5.3 で決めた「定義は domain、文言は `:app`」の
+最初の実例になっている。
+
+#### `setState()`: `MutableStateFlow.update {}` に再計算を入れない
+
+`update` は CAS のリトライでラムダを何度も呼ぶ契約なので、再計算・クランプ・
+`return@update` による中断のような「状態を作る以外のこと」を置く場所ではない。
+`CalcViewModel.setState()` に集約し、`update` に渡すのは純粋な `copy()` だけにした。
+状態変更は全てメインディスパッチャ上（UI コールバックと `viewModelScope` の collect）なので、
+CAS ループ無しの read-modify-write で足りる。
+
+#### Phase 1 の実機確認（2026-09-26、AVD `Pixel_8` / API 34）
+
+`:app:installDebug` して次を確認した（S-12 / U-3 は runtime にしか出ない失敗モードがある）:
+
+1. 起動 → CALC（タブタイトルがリソースから引けている）
+2. 4 タブ往復、詳細画面で親タブが選択状態のまま（`hasRoute()` 判定）
+3. シャーシ選択 → 保存 → SETUPS → 詳細 → 「CALC に流し込む」で値が反映される
+4. CALC でピニオンを 22T → 34T に変えてから再度流し込むと **22T に戻る**（ルート引数が効いている）
+5. `am kill` でプロセスを殺して再起動しても 22T のまま（旧バスでは消えていた）
 
 ## 6. 運用メモ
 
