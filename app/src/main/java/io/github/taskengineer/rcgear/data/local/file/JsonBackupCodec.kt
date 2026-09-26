@@ -23,7 +23,19 @@ import kotlinx.serialization.json.Json
 @Singleton
 class JsonBackupCodec @Inject constructor() : BackupCodec {
 
-    private val prettyJson = Json { prettyPrint = true }
+    /**
+     * `encodeDefaults = true` は必須（S-6 で発覚）。
+     * kotlinx.serialization は既定値と一致するフィールドを **書き出さない** ため、
+     * これが無いと `schemaVersion` が JSON に現れない（`ExportDataDto` の既定値が
+     * CURRENT_SCHEMA_VERSION なので常に一致する）。
+     * バージョンを書かないバックアップは、将来 v2 を出したときに
+     * v1 のアプリが「schemaVersion 省略 = 1」と誤読して壊れる。
+     * 空の `setups` / `overrides` も同じ理由で消えていた。
+     */
+    private val prettyJson = Json {
+        prettyPrint = true
+        encodeDefaults = true
+    }
     private val lenientJson = Json { ignoreUnknownKeys = true }
 
     override fun encode(data: BackupData): String =

@@ -1,16 +1,9 @@
 package io.github.taskengineer.rcgear.domain.usecase
 
 import io.github.taskengineer.rcgear.data.local.file.JsonBackupCodec
-import io.github.taskengineer.rcgear.domain.model.Chassis
-import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
-import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
-import io.github.taskengineer.rcgear.domain.repository.SetupRepository
-import io.mockk.coEvery
-import io.mockk.coJustRun
-import io.mockk.coVerify
-import io.mockk.mockk
-import io.mockk.slot
+import io.github.taskengineer.rcgear.fake.FakeChassisRepository
+import io.github.taskengineer.rcgear.fake.FakeSetupRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,36 +18,30 @@ import org.junit.Test
  *  - 取り込みが一括（＝トランザクション）で行われる
  *  - 既存データを壊さない（同名スキップ・不明シャーシスキップ）
  *
- * Repository は S-5 で interface 化されたので、S-6 で Fake に置き換える
- * （REF-3 は Fake を優先する方針）。それまでは MockK のまま。
+ * S-6 で MockK から Fake に移行した。Fake は `saved_setups.name` の
+ * ユニーク制約を再現するので、**重複を畳み損ねると本物と同じように落ちる**。
+ * MockK の `returns` ではこの制約が消え、取り込み全滅のバグを素通りさせてしまう。
  *
- * [JsonBackupCodec] は本物を使う。デコードを差し替えると
- * 「手書き JSON が実際にどう解釈されるか」というこのテストの主眼が消えるため、
+ * [JsonBackupCodec] も本物を使う。デコードを差し替えると
+ * 「手書き JSON が実際にどう解釈されるか」という主眼が消えるため、
  * ここは意図的にワイヤ形式まで通す。
  *
  * メソッド名のプレフィクスでカテゴリを表現 (valid_, invalid_, duplicate_, version_, batch_)。
  */
 class ImportDataUseCaseTest {
 
-    private lateinit var setupRepository: SetupRepository
-    private lateinit var chassisRepository: ChassisRepository
+    private lateinit var setupRepository: FakeSetupRepository
+    private lateinit var chassisRepository: FakeChassisRepository
     private lateinit var useCase: ImportDataUseCase
 
-    /** 一括登録に渡された内容を捕まえるためのスロット */
-    private val setupsSlot = slot<List<SavedSetup>>()
-    private val overridesSlot = slot<List<ChassisOverride>>()
+    /** 取り込まれたセッティング名（登録順） */
+    private val importedNames: List<String> get() = setupRepository.stored.map { it.name }
 
     @Before
     fun setUp() {
-        setupRepository = mockk()
-        chassisRepository = mockk()
+        setupRepository = FakeSetupRepository()
+        chassisRepository = FakeChassisRepository()
         useCase = ImportDataUseCase(setupRepository, chassisRepository, JsonBackupCodec())
-
-        // 既定: DB は空、シャーシは全て既知
-        coEvery { setupRepository.existsByName(any()) } returns false
-        coEvery { chassisRepository.getStandardChassisById(any()) } returns TT02
-        coJustRun { setupRepository.restoreAll(capture(setupsSlot)) }
-        coJustRun { chassisRepository.restoreAllOverrides(capture(overridesSlot)) }
     }
 
     // ----- valid_ -----
@@ -64,15 +51,15 @@ class ImportDataUseCaseTest {
         val result = useCase(json(setups = listOf(setupJson()), overrides = listOf(overrideJson())))
 
         result.assertSuccess(importedSetups = 1, importedOverrides = 1)
-        assertEquals(listOf("Rd1"), setupsSlot.captured.map { it.name })
-        assertEquals(listOf("tamiya_tt02"), overridesSlot.captured.map { it.chassisId })
+        assertEquals(listOf("Rd1"), importedNames)
+        assertEquals(listOf("tamiya_tt02"), chassisRepository.storedOverrides.map { it.chassisId })
     }
 
     @Test
     fun `valid_createdAt と updatedAt は元データのまま保持される`() = runTest {
         useCase(json(setups = listOf(setupJson(createdAt = 111L, updatedAt = 222L))))
 
-        val imported = setupsSlot.captured.single()
+        val imported = setupRepository.stored.single()
         assertEquals(111L, imported.createdAt)
         assertEquals(222L, imported.updatedAt)
     }
@@ -85,7 +72,7 @@ class ImportDataUseCaseTest {
         val result = useCase(json(setups = listOf(setupJson(name = "壊れた行", pinion = 5))))
 
         result.assertSuccess(importedSetups = 0, invalidSetups = 1)
-        assertTrue("不正な行が Room に渡っている", setupsSlot.captured.isEmpty())
+        assertTrue("不正な行が Room に入っている", setupRepository.stored.isEmpty())
     }
 
     @Test
@@ -102,7 +89,7 @@ class ImportDataUseCaseTest {
         )
 
         result.assertSuccess(importedSetups = 2, invalidSetups = 2)
-        assertEquals(listOf("OK1", "OK2"), setupsSlot.captured.map { it.name })
+        assertEquals(listOf("OK1", "OK2"), importedNames)
     }
 
     @Test
@@ -110,7 +97,7 @@ class ImportDataUseCaseTest {
         val result = importOverrides(listOf(overrideJson(internalRatio = 0.0)))
 
         result.assertSuccess(importedOverrides = 0, invalidOverrides = 1)
-        assertTrue(overridesSlot.captured.isEmpty())
+        assertTrue(chassisRepository.storedOverrides.isEmpty())
     }
 
     @Test
@@ -132,33 +119,47 @@ class ImportDataUseCaseTest {
 
     @Test
     fun `duplicate_既存と同名のセッティングはスキップされる`() = runTest {
-        coEvery { setupRepository.existsByName("Rd1") } returns true
+        setupRepository = FakeSetupRepository(initial = listOf(existingSetup("Rd1")))
+        useCase = ImportDataUseCase(setupRepository, chassisRepository, JsonBackupCodec())
 
         val result = useCase(json(setups = listOf(setupJson(name = "Rd1"), setupJson(name = "Rd2"))))
 
         result.assertSuccess(importedSetups = 1, skippedSetups = 1)
-        assertEquals(listOf("Rd2"), setupsSlot.captured.map { it.name })
+        assertEquals(listOf("Rd1", "Rd2"), importedNames)
     }
 
     @Test
     fun `duplicate_ファイル内で同名が重複していても一括登録が全滅しない`() = runTest {
         // name にユニークインデックスがあるため、重複を渡すと一括 insert が
         // 制約違反で全件ロールバックされてしまう。事前に畳んでおく。
+        // Fake もこの制約を再現するので、畳み忘れるとこのテストは例外で落ちる。
         val result = useCase(json(setups = listOf(setupJson(name = "同じ"), setupJson(name = "同じ"))))
 
         result.assertSuccess(importedSetups = 1, skippedSetups = 1)
-        assertEquals(1, setupsSlot.captured.size)
+        assertEquals(listOf("同じ"), importedNames)
     }
 
     @Test
     fun `duplicate_標準DBに無いシャーシの上書きはスキップされる`() = runTest {
-        coEvery { chassisRepository.getStandardChassisById("unknown_chassis") } returns null
-
         val result = importOverrides(
-            listOf(overrideJson(chassisId = "tamiya_tt02"), overrideJson(chassisId = "unknown_chassis"))
+            listOf(
+                overrideJson(chassisId = "tamiya_tt02"),
+                overrideJson(chassisId = "unknown_chassis")
+            )
         )
 
         result.assertSuccess(importedOverrides = 1, skippedOverrides = 1)
+        assertEquals(listOf("tamiya_tt02"), chassisRepository.storedOverrides.map { it.chassisId })
+    }
+
+    @Test
+    fun `duplicate_ファイル内で同じシャーシの上書きが重複したら後勝ちで1件になる`() = runTest {
+        val result = importOverrides(
+            listOf(overrideJson(internalRatio = 2.7), overrideJson(internalRatio = 2.8))
+        )
+
+        result.assertSuccess(importedOverrides = 1)
+        assertEquals(2.8, chassisRepository.storedOverrides.single().internalRatio!!, 1e-9)
     }
 
     // ----- version_ / format_ -----
@@ -168,6 +169,7 @@ class ImportDataUseCaseTest {
         val result = useCase("""{"schemaVersion":99,"exportedAt":0,"setups":[],"overrides":[]}""")
 
         assertEquals(ImportDataUseCase.Result.UnsupportedVersion, result)
+        assertTrue("拒否したのに書き込んでいる", setupRepository.stored.isEmpty())
     }
 
     @Test
@@ -185,13 +187,28 @@ class ImportDataUseCaseTest {
         // 一括メソッドに 1 回で渡していることを保証する。
         useCase(json(setups = List(3) { setupJson(name = "S$it") }))
 
-        coVerify(exactly = 1) { setupRepository.restoreAll(any()) }
-        assertEquals(3, setupsSlot.captured.size)
+        assertEquals(1, setupRepository.restoreAllCallCount)
+        assertEquals(3, setupRepository.stored.size)
     }
 
     // ----- ヘルパー -----
 
-    private suspend fun importOverrides(overrides: List<String>) = useCase(json(overrides = overrides))
+    private suspend fun importOverrides(overrides: List<String>) =
+        useCase(json(overrides = overrides))
+
+    private fun existingSetup(name: String) = SavedSetup(
+        id = 1,
+        name = name,
+        chassisId = "tamiya_tt02",
+        pinion = 22,
+        spur = 84,
+        internalRatioSnapshot = 2.6,
+        kv = 6500,
+        cells = 2,
+        tireMm = 63,
+        createdAt = 0L,
+        updatedAt = 0L
+    )
 
     private fun ImportDataUseCase.Result.assertSuccess(
         importedSetups: Int = 0,
@@ -263,13 +280,4 @@ class ImportDataUseCaseTest {
           "updatedAt": $updatedAt
         }
     """.trimIndent()
-
-    private companion object {
-        val TT02 = Chassis(
-            id = "tamiya_tt02",
-            name = "TT-02",
-            internalRatio = 2.6,
-            defaultTireMm = 63
-        )
-    }
 }
