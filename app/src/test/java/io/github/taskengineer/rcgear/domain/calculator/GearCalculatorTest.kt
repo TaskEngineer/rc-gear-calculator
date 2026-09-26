@@ -1,4 +1,4 @@
-package io.github.taskengineer.rcgear.core.domain
+package io.github.taskengineer.rcgear.domain.calculator
 
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import org.junit.Assert.assertEquals

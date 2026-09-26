@@ -6,7 +6,7 @@ import kotlin.math.roundToLong
 /**
  * 数値の表示整形（REF-6）。
  *
- * ドメイン層（[io.github.taskengineer.rcgear.core.domain.GearCalculator]）は
+ * ドメイン層（[io.github.taskengineer.rcgear.domain.calculator.GearCalculator]）は
  * 丸めを行わず生の Double を返す。桁数をどう見せるかは表示の都合なので、
  * ここに集約する。同じ値が画面ごとに違う桁数で出るのを防ぐのが目的。
  *

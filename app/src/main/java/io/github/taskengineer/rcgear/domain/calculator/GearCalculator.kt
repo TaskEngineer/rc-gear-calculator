@@ -1,4 +1,4 @@
-package io.github.taskengineer.rcgear.core.domain
+package io.github.taskengineer.rcgear.domain.calculator
 
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput.Companion.LIPO_CELL_VOLTAGE
