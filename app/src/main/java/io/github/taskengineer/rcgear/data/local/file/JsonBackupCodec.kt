@@ -26,11 +26,9 @@ class JsonBackupCodec @Inject constructor() : BackupCodec {
     /**
      * `encodeDefaults = true` は必須（S-6 で発覚）。
      * kotlinx.serialization は既定値と一致するフィールドを **書き出さない** ため、
-     * これが無いと `schemaVersion` が JSON に現れない（`ExportDataDto` の既定値が
-     * CURRENT_SCHEMA_VERSION なので常に一致する）。
+     * これが無いと現在の `schemaVersion`（1 = 既定値と同値）が JSON に現れない。
      * バージョンを書かないバックアップは、将来 v2 を出したときに
-     * v1 のアプリが「schemaVersion 省略 = 1」と誤読して壊れる。
-     * 空の `setups` / `overrides` も同じ理由で消えていた。
+     * 「省略 = v1」として読まれる。空の `setups` / `overrides` も同じ理由で消えていた。
      */
     private val prettyJson = Json {
         prettyPrint = true
@@ -41,6 +39,8 @@ class JsonBackupCodec @Inject constructor() : BackupCodec {
     override fun encode(data: BackupData): String =
         prettyJson.encodeToString(
             ExportDataDto(
+                // 既定値は「キーが無いファイル = v1」用なので、書き出す版は明示する
+                schemaVersion = ExportDataDto.CURRENT_SCHEMA_VERSION,
                 exportedAt = data.exportedAt,
                 setups = data.setups.map { it.toDto() },
                 overrides = data.overrides.map { it.toDto() }
