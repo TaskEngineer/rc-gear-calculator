@@ -7,33 +7,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
+import io.github.taskengineer.rcgear.core.designsystem.component.RcNumberField
+import io.github.taskengineer.rcgear.core.designsystem.component.RcTextField
+import io.github.taskengineer.rcgear.core.designsystem.component.RcTopAppBar
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 
 /**
@@ -42,7 +36,6 @@ import io.github.taskengineer.rcgear.core.ui.formatRatio
  * 標準値を残したまま、内部減速比 / タイヤ径 / 備考をフィールド単位で上書きする。
  * 「リセット」で上書きを破棄して標準値に戻す（PLAN 2.1.3）。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChassisEditScreen(
     onNavigateBack: () -> Unit,
@@ -59,16 +52,10 @@ fun ChassisEditScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
-                title = { Text(state.standard?.name ?: "シャーシ編集") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "戻る"
-                        )
-                    }
-                }
+            RcTopAppBar(
+                title = state.standard?.name ?: "シャーシ編集",
+                onNavigateBack = onNavigateBack,
+                backContentDescription = "戻る"
             )
         }
     ) { innerPadding ->
@@ -92,53 +79,40 @@ fun ChassisEditScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // ---- 標準値の表示 ----
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                RcCard(title = "標準値（同梱DB）", spacing = 4.dp) {
+                    Text(
+                        text = "内部減速比 ${standard.internalRatio.formatRatio()}  /  " +
+                            "タイヤ径 ${standard.defaultTireMm}mm",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    standard.note?.takeIf { it.isNotBlank() }?.let {
                         Text(
-                            text = "標準値（同梱DB）",
-                            style = MaterialTheme.typography.labelMedium,
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            text = "内部減速比 ${standard.internalRatio.formatRatio()}  /  タイヤ径 ${standard.defaultTireMm}mm",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        standard.note?.takeIf { it.isNotBlank() }?.let {
-                            Text(
-                                text = it,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
 
                 // ---- 編集フォーム ----
-                OutlinedTextField(
+                RcNumberField(
+                    label = "内部減速比",
                     value = state.ratioInput,
                     onValueChange = viewModel::onRatioChange,
-                    label = { Text("内部減速比") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
+                    decimal = true
                 )
-                OutlinedTextField(
+                RcNumberField(
+                    label = "タイヤ径",
                     value = state.tireInput,
                     onValueChange = viewModel::onTireChange,
-                    label = { Text("タイヤ径 [mm]") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    unit = "mm"
                 )
-                OutlinedTextField(
+                RcTextField(
+                    label = "備考",
                     value = state.noteInput,
                     onValueChange = viewModel::onNoteChange,
-                    label = { Text("備考") },
-                    modifier = Modifier.fillMaxWidth()
+                    singleLine = false
                 )
 
                 state.errorMessage?.let {

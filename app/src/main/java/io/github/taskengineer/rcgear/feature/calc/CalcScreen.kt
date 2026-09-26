@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -43,15 +42,17 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.github.taskengineer.rcgear.core.designsystem.component.MetricsGrid
+import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
+import io.github.taskengineer.rcgear.core.designsystem.component.RcSlider
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.feature.calc.component.BalanceBar
 import io.github.taskengineer.rcgear.feature.calc.component.ChassisSelectBottomSheet
 import io.github.taskengineer.rcgear.feature.calc.component.ChassisSelectorCard
 import io.github.taskengineer.rcgear.feature.calc.component.GearDiagram
-import io.github.taskengineer.rcgear.feature.calc.component.GearSlider
-import io.github.taskengineer.rcgear.feature.calc.component.MetricsGrid
 import io.github.taskengineer.rcgear.feature.calc.component.SaveSetupDialog
 import io.github.taskengineer.rcgear.feature.calc.component.SpeedHud
+import io.github.taskengineer.rcgear.feature.calc.component.gearMetrics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -150,7 +151,7 @@ fun CalcScreen(
                         animationEnabled = state.animationEnabled
                     )
 
-                    MetricsGrid(result = state.result)
+                    MetricsGrid(metrics = gearMetrics(state.result))
 
                     BalanceBar(
                         balancePct = state.result?.balanceIndicatorPct,
@@ -255,57 +256,46 @@ private fun SliderSection(
     state: CalcUiState,
     viewModel: CalcViewModel
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = "入力",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            GearSlider(
-                label = "ピニオン",
-                value = state.pinion,
-                onValueChange = viewModel::onPinionChange,
-                onValueChangeFinished = viewModel::onSliderChangeFinished,
-                valueRange = GearCalculationInput.MIN_PINION..GearCalculationInput.MAX_PINION,
-                unit = "T"
-            )
-            GearSlider(
-                label = "スパー",
-                value = state.spur,
-                onValueChange = viewModel::onSpurChange,
-                onValueChangeFinished = viewModel::onSliderChangeFinished,
-                valueRange = GearCalculationInput.MIN_SPUR..GearCalculationInput.MAX_SPUR,
-                unit = "T"
-            )
-            GearSlider(
-                label = "モーターKV",
-                value = state.kv,
-                onValueChange = viewModel::onKvChange,
-                onValueChangeFinished = viewModel::onSliderChangeFinished,
-                valueRange = GearCalculationInput.MIN_KV..GearCalculationInput.MAX_KV,
-                step = GearCalculationInput.KV_STEP
-            )
-            GearSlider(
-                label = "セル数",
-                value = state.cells,
-                onValueChange = viewModel::onCellsChange,
-                onValueChangeFinished = viewModel::onSliderChangeFinished,
-                valueRange = GearCalculationInput.MIN_CELLS..GearCalculationInput.MAX_CELLS,
-                unit = "S"
-            )
-            GearSlider(
-                label = "タイヤ径",
-                value = state.tireMm,
-                onValueChange = viewModel::onTireMmChange,
-                onValueChangeFinished = viewModel::onSliderChangeFinished,
-                valueRange = GearCalculationInput.MIN_TIRE_MM..GearCalculationInput.MAX_TIRE_MM,
-                unit = "mm"
-            )
-        }
+    RcCard(title = "入力", spacing = 4.dp) {
+        RcSlider(
+            label = "ピニオン",
+            value = state.pinion,
+            onValueChange = viewModel::onPinionChange,
+            onValueChangeFinished = viewModel::onSliderChangeFinished,
+            valueRange = GearCalculationInput.MIN_PINION..GearCalculationInput.MAX_PINION,
+            unit = "T"
+        )
+        RcSlider(
+            label = "スパー",
+            value = state.spur,
+            onValueChange = viewModel::onSpurChange,
+            onValueChangeFinished = viewModel::onSliderChangeFinished,
+            valueRange = GearCalculationInput.MIN_SPUR..GearCalculationInput.MAX_SPUR,
+            unit = "T"
+        )
+        RcSlider(
+            label = "モーターKV",
+            value = state.kv,
+            onValueChange = viewModel::onKvChange,
+            onValueChangeFinished = viewModel::onSliderChangeFinished,
+            valueRange = GearCalculationInput.MIN_KV..GearCalculationInput.MAX_KV,
+            step = GearCalculationInput.KV_STEP
+        )
+        RcSlider(
+            label = "セル数",
+            value = state.cells,
+            onValueChange = viewModel::onCellsChange,
+            onValueChangeFinished = viewModel::onSliderChangeFinished,
+            valueRange = GearCalculationInput.MIN_CELLS..GearCalculationInput.MAX_CELLS,
+            unit = "S"
+        )
+        RcSlider(
+            label = "タイヤ径",
+            value = state.tireMm,
+            onValueChange = viewModel::onTireMmChange,
+            onValueChangeFinished = viewModel::onSliderChangeFinished,
+            valueRange = GearCalculationInput.MIN_TIRE_MM..GearCalculationInput.MAX_TIRE_MM,
+            unit = "mm"
+        )
     }
 }

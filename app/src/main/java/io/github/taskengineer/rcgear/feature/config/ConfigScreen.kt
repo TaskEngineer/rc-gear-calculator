@@ -2,7 +2,6 @@ package io.github.taskengineer.rcgear.feature.config
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,16 +10,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,10 +25,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.taskengineer.rcgear.BuildConfig
+import io.github.taskengineer.rcgear.core.designsystem.component.ChoiceRow
+import io.github.taskengineer.rcgear.core.designsystem.component.RcNumberField
+import io.github.taskengineer.rcgear.core.designsystem.component.SectionHeader
+import io.github.taskengineer.rcgear.core.designsystem.component.SwitchRow
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
 import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import java.text.SimpleDateFormat
@@ -76,7 +74,7 @@ fun ConfigScreen(
         ) {
             // ---- DISPLAY ----
             SectionHeader("DISPLAY")
-            ConfigRow(
+            ChoiceRow(
                 title = "テーマ",
                 value = state.preferences.themeMode.label(),
                 onClick = viewModel::onThemeDialogOpen
@@ -94,7 +92,7 @@ fun ConfigScreen(
 
             // ---- CALC TUNING ----
             SectionHeader("CALC TUNING")
-            ConfigRow(
+            ChoiceRow(
                 title = "基準 FDR",
                 subtitle = "セッティング傾向バーの中央となる最終減速比",
                 value = state.preferences.balanceFdr.formatSpeed(),
@@ -103,17 +101,17 @@ fun ConfigScreen(
 
             // ---- DATA ----
             SectionHeader("DATA")
-            ConfigRow(
+            ChoiceRow(
                 title = "データを書き出す",
                 subtitle = "保存セッティングとシャーシ上書きを JSON で保存",
                 onClick = { exportLauncher.launch(defaultExportFileName()) }
             )
-            ConfigRow(
+            ChoiceRow(
                 title = "データを読み込む",
                 subtitle = "書き出した JSON から取り込み（既存データは保持）",
                 onClick = { importLauncher.launch(arrayOf("application/json")) }
             )
-            ConfigRow(
+            ChoiceRow(
                 title = "全データを削除",
                 subtitle = "保存セッティング・上書き・履歴・設定をすべて消去",
                 titleColor = MaterialTheme.colorScheme.error,
@@ -122,7 +120,7 @@ fun ConfigScreen(
 
             // ---- ABOUT ----
             SectionHeader("ABOUT")
-            ConfigRow(
+            ChoiceRow(
                 title = "バージョン",
                 value = BuildConfig.VERSION_NAME,
                 onClick = null
@@ -173,82 +171,6 @@ fun ConfigScreen(
                 }
             }
         )
-    }
-}
-
-// ============================================================
-// セクション・行コンポーネント
-// ============================================================
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp)
-    )
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-}
-
-@Composable
-private fun ConfigRow(
-    title: String,
-    onClick: (() -> Unit)?,
-    subtitle: String? = null,
-    value: String? = null,
-    titleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = titleColor
-            )
-            subtitle?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        value?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
-
-@Composable
-private fun SwitchRow(
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -310,16 +232,13 @@ private fun BalanceFdrDialog(
         onDismissRequest = onDismiss,
         title = { Text("基準 FDR") },
         text = {
-            OutlinedTextField(
+            RcNumberField(
+                label = "基準 FDR",
                 value = input,
                 onValueChange = onInputChange,
-                label = { Text("基準 FDR") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                isError = error != null,
-                supportingText = {
-                    Text(error ?: "セッティング傾向バーの中央（デフォルト 7.0）")
-                }
+                decimal = true,
+                error = error,
+                hint = "セッティング傾向バーの中央（デフォルト 7.0）"
             )
         },
         confirmButton = {
