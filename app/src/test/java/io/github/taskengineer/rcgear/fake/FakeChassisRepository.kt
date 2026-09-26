@@ -17,12 +17,18 @@ import kotlinx.coroutines.flow.map
 class FakeChassisRepository(
     private val standardMakers: List<Maker> = listOf(DEFAULT_MAKER),
     initialOverrides: List<ChassisOverride> = emptyList()
-) : ChassisRepository {
+) : ChassisRepository, Snapshotable {
 
     private val overrides = MutableStateFlow(initialOverrides.associateBy { it.chassisId })
 
     /** overrideChassis() が刻む時刻。テストから差し替えられる */
     var now: Long = 1_000L
+
+    /**
+     * true にすると [restoreAllOverrides] が例外を投げる。
+     * 「取り込みの途中で失敗したときに 1 行も入らない」ことを確かめるためのスイッチ（M-8）。
+     */
+    var failOnRestoreOverrides: Boolean = false
 
     /** アサーション用。現在の上書き一覧 */
     val storedOverrides: List<ChassisOverride> get() = overrides.value.values.toList()
@@ -71,6 +77,7 @@ class FakeChassisRepository(
 
     override suspend fun restoreAllOverrides(overrides: List<ChassisOverride>) {
         restoreAllOverridesCallCount++
+        if (failOnRestoreOverrides) error("上書きの書き込みに失敗（テスト用）")
         if (overrides.isEmpty()) return
         this.overrides.value += overrides.associateBy { it.chassisId }
     }
@@ -113,4 +120,11 @@ class FakeChassisRepository(
         )
         val DEFAULT_MAKER = Maker(name = "タミヤ", chassis = listOf(TT02, TA08))
     }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun restoreState(state: Any) {
+        overrides.value = state as Map<String, ChassisOverride>
+    }
+
+    override fun captureState(): Any = overrides.value
 }

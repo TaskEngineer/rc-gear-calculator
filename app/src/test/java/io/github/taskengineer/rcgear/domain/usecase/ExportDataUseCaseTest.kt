@@ -8,6 +8,7 @@ import io.github.taskengineer.rcgear.fake.FakeCarRepository
 import io.github.taskengineer.rcgear.fake.FakeChassisRepository
 import io.github.taskengineer.rcgear.fake.FakeIdGenerator
 import io.github.taskengineer.rcgear.fake.FakeSetupSheetRepository
+import io.github.taskengineer.rcgear.fake.FakeTransactionRunner
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -91,7 +92,14 @@ class ExportDataUseCaseTest {
         val restoredSheets = FakeSetupSheetRepository()
         val restoredCars = FakeCarRepository(sheetRepository = restoredSheets)
         val restoredChassis = FakeChassisRepository()
-        val result = ImportDataUseCase(restoredCars, restoredSheets, restoredChassis, codec)(json)
+        val importer = ImportDataUseCase(
+            restoredCars,
+            restoredSheets,
+            restoredChassis,
+            codec,
+            FakeTransactionRunner(restoredCars, restoredSheets, restoredChassis)
+        )
+        val result = importer(json)
 
         assertEquals(
             ImportDataUseCase.Result.Success(
@@ -113,7 +121,13 @@ class ExportDataUseCaseTest {
         sheets.createSheet(carId, "Rd1", SetupValues.EMPTY)
         val json = export()
 
-        val importer = ImportDataUseCase(cars, sheets, chassis, codec)
+        val importer = ImportDataUseCase(
+            cars,
+            sheets,
+            chassis,
+            codec,
+            FakeTransactionRunner(cars, sheets, chassis)
+        )
         importer(json)
         importer(json)
 

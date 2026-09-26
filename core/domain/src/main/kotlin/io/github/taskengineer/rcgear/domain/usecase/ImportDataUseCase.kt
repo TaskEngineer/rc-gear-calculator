@@ -1,6 +1,8 @@
 package io.github.taskengineer.rcgear.domain.usecase
 
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
+import io.github.taskengineer.rcgear.domain.backup.BackupData
+import io.github.taskengineer.rcgear.domain.common.TransactionRunner
 import io.github.taskengineer.rcgear.domain.model.Car
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
@@ -35,14 +37,18 @@ import javax.inject.Inject
  * 項目が入ったファイルを読んでも値が消えないことが、スキーマを安全に進化させる担保になる。
  *
  * ### 原子性（BUG-3 / M-8）
- * 検証を通った行は Repository の一括メソッドでまとめて書き込む。
- * ファイル全体を 1 トランザクションにするのは M-8。
+ * 検証を通った行は Repository の一括メソッドでまとめて書き込み、さらに
+ * **ファイル 1 つの取り込み全体を 1 トランザクション**で囲む（[TransactionRunner]）。
+ * 車・シート・上書きは別々の Repository なので、囲まないと
+ * 「車とシートは入ったが上書きの途中で失敗」という半端な状態が残りうる。
+ * 検証（どの行を捨てるか）はトランザクションの外で済ませ、中では書き込みしかしない。
  */
 class ImportDataUseCase @Inject constructor(
     private val carRepository: CarRepository,
     private val sheetRepository: SetupSheetRepository,
     private val chassisRepository: ChassisRepository,
-    private val codec: BackupCodec
+    private val codec: BackupCodec,
+    private val transactionRunner: TransactionRunner
 ) {
 
     sealed interface Result {
@@ -80,7 +86,10 @@ class ImportDataUseCase @Inject constructor(
             BackupCodec.DecodeResult.InvalidFormat -> return Result.InvalidFormat
             BackupCodec.DecodeResult.UnsupportedVersion -> return Result.UnsupportedVersion
         }
+        return transactionRunner { import(data) }
+    }
 
+    private suspend fun import(data: BackupData): Result {
         // ---- 車 ----
         var skippedCars = 0
         val carsToInsert = mutableListOf<Car>()

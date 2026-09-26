@@ -5,6 +5,7 @@ import io.github.taskengineer.rcgear.fake.FakeCarRepository
 import io.github.taskengineer.rcgear.fake.FakeChassisRepository
 import io.github.taskengineer.rcgear.fake.FakeIdGenerator
 import io.github.taskengineer.rcgear.fake.FakeSetupSheetRepository
+import io.github.taskengineer.rcgear.fake.FakeTransactionRunner
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -25,13 +26,14 @@ import org.junit.Test
  * 「手書き JSON が実際にどう解釈されるか」という主眼が消えるため、
  * ここは意図的にワイヤ形式まで通す。
  *
- * メソッド名のプレフィクスでカテゴリを表現 (v2_, v1_, invalid_, version_, batch_)。
+ * メソッド名のプレフィクスでカテゴリを表現 (v2_, v1_, invalid_, version_, batch_, atomic_)。
  */
 class ImportDataUseCaseTest {
 
     private lateinit var sheets: FakeSetupSheetRepository
     private lateinit var cars: FakeCarRepository
     private lateinit var chassis: FakeChassisRepository
+    private lateinit var transactions: FakeTransactionRunner
     private lateinit var useCase: ImportDataUseCase
 
     @Before
@@ -39,7 +41,14 @@ class ImportDataUseCaseTest {
         sheets = FakeSetupSheetRepository()
         cars = FakeCarRepository(sheetRepository = sheets)
         chassis = FakeChassisRepository()
-        useCase = ImportDataUseCase(cars, sheets, chassis, JsonBackupCodec(FakeIdGenerator()))
+        transactions = FakeTransactionRunner(cars, sheets, chassis)
+        useCase = ImportDataUseCase(
+            cars,
+            sheets,
+            chassis,
+            JsonBackupCodec(FakeIdGenerator()),
+            transactions
+        )
     }
 
     // ----- v2_ -----
@@ -261,6 +270,55 @@ class ImportDataUseCaseTest {
         assertEquals(1, sheets.restoreAllCallCount)
         assertEquals(2, cars.getAllOnce().size)
         assertEquals(2, sheets.getAllOnce().size)
+    }
+
+    // ----- atomic_: M-8（ファイル全体で 1 トランザクション） -----
+
+    @Test
+    fun `atomic_途中で失敗したら 1 行も入らない`() = runTest {
+        // 車・シート・上書きは別々の Repository なので、囲まないと
+        // 「車とシートは入ったが上書きで失敗」という半端な状態が残る
+        chassis.failOnRestoreOverrides = true
+
+        var thrown: Throwable? = null
+        try {
+            useCase(
+                v2Json(
+                    cars = listOf(carJson()),
+                    sheets = listOf(sheetJson()),
+                    overrides = listOf(overrideJson())
+                )
+            )
+        } catch (e: IllegalStateException) {
+            thrown = e
+        }
+
+        assertTrue("書き込みの失敗が握りつぶされている", thrown != null)
+        assertEquals(1, transactions.rollbackCount)
+        assertTrue("車が半端に入っている", cars.getAllOnce().isEmpty())
+        assertTrue("シートが半端に入っている", sheets.getAllOnce().isEmpty())
+    }
+
+    @Test
+    fun `atomic_失敗しても既存データは残る`() = runTest {
+        val existing = cars.createCar("既存の車", "tamiya_tt02")
+        chassis.failOnRestoreOverrides = true
+
+        try {
+            useCase(v2Json(cars = listOf(carJson()), overrides = listOf(overrideJson())))
+        } catch (e: IllegalStateException) {
+            // 期待どおり
+        }
+
+        assertEquals(listOf(existing), cars.getAllOnce().map { it.id })
+    }
+
+    @Test
+    fun `atomic_成功時はロールバックしない`() = runTest {
+        useCase(v2Json(cars = listOf(carJson())))
+
+        assertEquals(0, transactions.rollbackCount)
+        assertEquals(1, cars.getAllOnce().size)
     }
 
     // ----- ヘルパー -----

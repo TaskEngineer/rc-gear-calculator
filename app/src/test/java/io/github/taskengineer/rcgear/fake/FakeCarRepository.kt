@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.map
 class FakeCarRepository(
     initial: List<Car> = emptyList(),
     private val sheetRepository: FakeSetupSheetRepository? = null
-) : CarRepository {
+) : CarRepository, Snapshotable {
 
     private val cars = MutableStateFlow(initial.associateBy { it.id })
 
@@ -81,4 +81,11 @@ class FakeCarRepository(
     /** 一括で 1 回だけ呼ばれていることの確認用（BUG-3） */
     var restoreAllCallCount: Int = 0
         private set
+
+    @Suppress("UNCHECKED_CAST")
+    override fun restoreState(state: Any) {
+        cars.value = state as Map<String, Car>
+    }
+
+    override fun captureState(): Any = cars.value
 }

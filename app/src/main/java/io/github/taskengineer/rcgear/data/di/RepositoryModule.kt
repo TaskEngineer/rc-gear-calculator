@@ -5,6 +5,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.taskengineer.rcgear.data.local.file.JsonBackupCodec
+import io.github.taskengineer.rcgear.data.local.room.RoomTransactionRunner
 import io.github.taskengineer.rcgear.data.repository.CarRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.ChassisRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.PreferencesRepositoryImpl
@@ -14,6 +15,7 @@ import io.github.taskengineer.rcgear.data.system.UuidIdGenerator
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.common.IdGenerator
 import io.github.taskengineer.rcgear.domain.common.TimeProvider
+import io.github.taskengineer.rcgear.domain.common.TransactionRunner
 import io.github.taskengineer.rcgear.domain.repository.CarRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
@@ -58,4 +60,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindIdGenerator(impl: UuidIdGenerator): IdGenerator
+
+    @Binds
+    @Singleton
+    abstract fun bindTransactionRunner(impl: RoomTransactionRunner): TransactionRunner
 }

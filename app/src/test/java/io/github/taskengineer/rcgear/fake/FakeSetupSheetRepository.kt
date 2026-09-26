@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.map
  */
 class FakeSetupSheetRepository(
     initial: List<SetupSheetWithValues> = emptyList()
-) : SetupSheetRepository {
+) : SetupSheetRepository, Snapshotable {
 
     private val sheets = MutableStateFlow(initial.associateBy { it.id })
 
@@ -119,6 +119,13 @@ class FakeSetupSheetRepository(
     /** 一括で 1 回だけ呼ばれていることの確認用（BUG-3） */
     var restoreAllCallCount: Int = 0
         private set
+
+    @Suppress("UNCHECKED_CAST")
+    override fun restoreState(state: Any) {
+        sheets.value = state as Map<String, SetupSheetWithValues>
+    }
+
+    override fun captureState(): Any = sheets.value
 
     /** 走行日の新しい順、日付未入力は作成順で後ろ */
     private fun List<SetupSheet>.sorted(): List<SetupSheet> = sortedWith(
