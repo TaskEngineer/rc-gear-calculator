@@ -52,12 +52,12 @@ import io.github.taskengineer.rcgear.feature.calc.component.GearSlider
 import io.github.taskengineer.rcgear.feature.calc.component.MetricsGrid
 import io.github.taskengineer.rcgear.feature.calc.component.SaveSetupDialog
 import io.github.taskengineer.rcgear.feature.calc.component.SpeedHud
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * CALC タブ: メイン計算画面（PLAN Step 8 / 仕上げは Step 12）。

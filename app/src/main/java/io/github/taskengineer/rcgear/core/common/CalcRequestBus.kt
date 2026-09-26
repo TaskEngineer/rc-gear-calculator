@@ -1,11 +1,11 @@
 package io.github.taskengineer.rcgear.core.common
 
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * SETUPS → CALC の「セッティングを流し込む」特殊遷移（PLAN 5.3）用の受け渡しバス。

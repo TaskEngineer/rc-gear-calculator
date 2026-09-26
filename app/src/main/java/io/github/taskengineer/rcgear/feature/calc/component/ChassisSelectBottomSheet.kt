@@ -16,9 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.Maker
-import java.util.Locale
 
 /**
  * シャーシ選択ボトムシート（PLAN 5.2）。
@@ -104,7 +104,7 @@ private fun ChassisRow(
             }
         }
         Text(
-            text = String.format(Locale.US, "%.2f", chassis.internalRatio),
+            text = chassis.internalRatio.formatRatio(),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

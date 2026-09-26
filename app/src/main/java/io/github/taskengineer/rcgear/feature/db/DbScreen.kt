@@ -23,8 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.domain.model.Chassis
-import java.util.Locale
 
 /**
  * DB タブ: シャーシDB管理画面（PLAN Step 10）。
@@ -149,7 +149,7 @@ private fun ChassisCard(
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = String.format(Locale.US, "%.2f", chassis.internalRatio),
+                    text = chassis.internalRatio.formatRatio(),
                     style = MaterialTheme.typography.labelLarge,
                     color = if (chassis.isUserEdited) {
                         MaterialTheme.colorScheme.tertiary

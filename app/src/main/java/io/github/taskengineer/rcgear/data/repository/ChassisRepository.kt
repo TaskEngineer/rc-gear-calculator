@@ -6,11 +6,11 @@ import io.github.taskengineer.rcgear.data.local.room.entity.ChassisOverrideEntit
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.Maker
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * シャーシDBのリポジトリ（本アプリの中核ロジック、PLAN 4.3）。

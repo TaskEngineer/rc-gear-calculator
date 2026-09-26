@@ -5,13 +5,13 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.taskengineer.rcgear.data.local.asset.dto.ChassisDatabaseDto
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.Maker
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * assets/chassis-db.json を読み込み、ドメインモデルに変換する。

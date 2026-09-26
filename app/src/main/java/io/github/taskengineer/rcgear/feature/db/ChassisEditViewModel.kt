@@ -4,16 +4,16 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.data.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Locale
-import javax.inject.Inject
 
 /**
  * シャーシ編集画面の ViewModel（PLAN Step 10）。
@@ -49,7 +49,7 @@ class ChassisEditViewModel @Inject constructor(
                     standard = standard,
                     current = current,
                     // 入力欄は現在の有効値（上書きがあれば上書き値）で初期化
-                    ratioInput = String.format(Locale.US, "%.2f", current.internalRatio),
+                    ratioInput = current.internalRatio.formatRatio(),
                     tireInput = current.defaultTireMm.toString(),
                     noteInput = current.note.orEmpty()
                 )

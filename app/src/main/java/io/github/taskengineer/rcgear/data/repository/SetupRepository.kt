@@ -3,11 +3,11 @@ package io.github.taskengineer.rcgear.data.repository
 import io.github.taskengineer.rcgear.data.local.room.dao.SavedSetupDao
 import io.github.taskengineer.rcgear.data.local.room.entity.SavedSetupEntity
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * 保存セッティングのリポジトリ。

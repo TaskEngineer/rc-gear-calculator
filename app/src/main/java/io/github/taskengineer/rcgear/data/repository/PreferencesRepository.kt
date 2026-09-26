@@ -3,9 +3,9 @@ package io.github.taskengineer.rcgear.data.repository
 import io.github.taskengineer.rcgear.core.designsystem.theme.ThemeMode
 import io.github.taskengineer.rcgear.data.local.datastore.UserPreferencesDataSource
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
 
 /**
  * ユーザー設定のリポジトリ。

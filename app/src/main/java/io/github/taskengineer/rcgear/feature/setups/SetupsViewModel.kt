@@ -6,11 +6,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.taskengineer.rcgear.data.repository.ChassisRepository
 import io.github.taskengineer.rcgear.data.repository.SetupRepository
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
+import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
 /**
  * SETUPS 画面（保存セッティング一覧）の ViewModel。

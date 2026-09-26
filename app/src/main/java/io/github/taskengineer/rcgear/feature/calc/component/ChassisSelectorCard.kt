@@ -14,8 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.feature.calc.SelectedChassis
-import java.util.Locale
 
 /**
  * 選択中シャーシの表示カード。タップでシャーシ選択ボトムシートを開く（PLAN 5.2）。
@@ -72,9 +72,7 @@ fun ChassisSelectorCard(
                         }
                     }
                     Text(
-                        text = "内部減速比 " + String.format(
-                            Locale.US, "%.2f", selected.chassis.internalRatio
-                        ),
+                        text = "内部減速比 " + selected.chassis.internalRatio.formatRatio(),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

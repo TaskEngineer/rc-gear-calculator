@@ -8,9 +8,9 @@ import io.github.taskengineer.rcgear.data.repository.SetupRepository
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
+import javax.inject.Inject
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
 
 /**
  * エクスポートJSON からデータを取り込む（PLAN Step 11）。
