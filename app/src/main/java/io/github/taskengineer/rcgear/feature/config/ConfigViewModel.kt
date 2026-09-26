@@ -10,6 +10,7 @@ import io.github.taskengineer.rcgear.core.ui.formatSpeed
 import io.github.taskengineer.rcgear.data.local.file.JsonFileDataSource
 import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
+import io.github.taskengineer.rcgear.domain.repository.CarRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
 import io.github.taskengineer.rcgear.domain.usecase.ExportDataUseCase
@@ -31,6 +32,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ConfigViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
+    private val carRepository: CarRepository,
     private val chassisRepository: ChassisRepository,
     private val exportDataUseCase: ExportDataUseCase,
     private val importDataUseCase: ImportDataUseCase,
@@ -156,7 +158,8 @@ class ConfigViewModel @Inject constructor(
 
     fun onDeleteAllConfirm() {
         viewModelScope.launch {
-            // 車 / シートの削除は Repository が入る M-4 で足す
+            // シートと値は cars の CASCADE で一緒に消える
+            carRepository.deleteAll()
             chassisRepository.resetAllOverrides()
             preferencesRepository.clear()
             _uiState.update {

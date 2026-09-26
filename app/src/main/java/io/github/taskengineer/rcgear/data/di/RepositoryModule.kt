@@ -5,13 +5,19 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.taskengineer.rcgear.data.local.file.JsonBackupCodec
+import io.github.taskengineer.rcgear.data.repository.CarRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.ChassisRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.PreferencesRepositoryImpl
+import io.github.taskengineer.rcgear.data.repository.SetupSheetRepositoryImpl
 import io.github.taskengineer.rcgear.data.system.SystemTimeProvider
+import io.github.taskengineer.rcgear.data.system.UuidIdGenerator
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
+import io.github.taskengineer.rcgear.domain.common.IdGenerator
 import io.github.taskengineer.rcgear.domain.common.TimeProvider
+import io.github.taskengineer.rcgear.domain.repository.CarRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
+import io.github.taskengineer.rcgear.domain.repository.SetupSheetRepository
 import javax.inject.Singleton
 
 /**
@@ -31,6 +37,14 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
+    abstract fun bindCarRepository(impl: CarRepositoryImpl): CarRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSetupSheetRepository(impl: SetupSheetRepositoryImpl): SetupSheetRepository
+
+    @Binds
+    @Singleton
     abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
 
     @Binds
@@ -40,4 +54,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindTimeProvider(impl: SystemTimeProvider): TimeProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindIdGenerator(impl: UuidIdGenerator): IdGenerator
 }
