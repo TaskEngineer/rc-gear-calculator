@@ -186,6 +186,52 @@ class CalcViewModelTest {
         assertEquals(30, prefs.current.lastPinion)
     }
 
+    @Test
+    fun `slider_同一 tick で複数回更新しても値と計算結果がズレない`() = runTest {
+        // U-4 / DEBT-10。以前は MutableStateFlow.update {} の中で再計算していた。
+        // update はリトライでラムダを何度も呼ぶ契約なので、
+        // 「入力は新しいのに結果は古い」状態を観測する余地が残っていた。
+        // スライダーのドラッグは 1 フレーム内に複数回 onValueChange を撃つため、
+        // ここでは advanceUntilIdle を挟まずに連続更新する。
+        val vm = viewModel(prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02"))
+        advanceUntilIdle()
+
+        vm.onPinionChange(20)
+        vm.onSpurChange(80)
+        vm.onTireMmChange(70)
+
+        with(vm.uiState.value) {
+            assertEquals(20, pinion)
+            assertEquals(80, spur)
+            assertEquals(70, tireMm)
+            // FDR = スパー / ピニオン × 内部減速比 = 80 / 20 × 2.6
+            assertEquals(
+                80.0 / 20.0 * FakeChassisRepository.TT02.internalRatio,
+                result!!.finalDriveRatio,
+                1e-9
+            )
+        }
+    }
+
+    @Test
+    fun `slider_範囲外の値はクランプされて結果も丸めた値で計算される`() = runTest {
+        // クランプは setState の 1 箇所に集約されている（REF-1）。
+        val vm = viewModel(prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02"))
+        advanceUntilIdle()
+
+        vm.onSpurChange(999)
+
+        with(vm.uiState.value) {
+            assertEquals(GearCalculationInput.MAX_SPUR, spur)
+            assertEquals(
+                GearCalculationInput.MAX_SPUR.toDouble() / pinion *
+                    FakeChassisRepository.TT02.internalRatio,
+                result!!.finalDriveRatio,
+                1e-9
+            )
+        }
+    }
+
     // ----- prefs_ -----
 
     @Test

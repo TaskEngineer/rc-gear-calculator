@@ -64,22 +64,19 @@ class CalcViewModel @Inject constructor(
             //    流し込み要求があればそれを、無ければ前回終了時の値を初期値にする。
             //    要求元（SETUPS）の画面は既に消えている可能性があるので、ここで自分で読み直す。
             val requested = requestedSetupId?.let { setupRepository.getById(it) }
-            _uiState.update { it.withInitialValues(prefs, requested) }
+            setState { it.withInitialValues(prefs, requested) }
             val initialChassisId = requested?.chassisId ?: prefs.lastSelectedChassisId
 
             // 2. シャーシDBを購読。上書きの変更（DB画面での編集）にもリアルタイム追従する。
             var isFirstEmission = true
             chassisRepository.getAllMakers().collect { makers ->
-                _uiState.update { state ->
+                setState { state ->
                     // 既に選択済みならそのIDを、初回なら 1. で決めたIDを解決する
                     val targetId = state.selectedChassis?.chassis?.id ?: initialChassisId
-                    val selected = targetId?.let { id -> findChassis(makers, id) }
-                    recalculate(
-                        state.copy(
-                            isLoading = false,
-                            makers = makers,
-                            selectedChassis = selected
-                        )
+                    state.copy(
+                        isLoading = false,
+                        makers = makers,
+                        selectedChassis = targetId?.let { id -> findChassis(makers, id) }
                     )
                 }
                 if (isFirstEmission) {
@@ -95,17 +92,32 @@ class CalcViewModel @Inject constructor(
         // 設定変更（CONFIG 画面での mph 表示切替・基準FDR変更）に追従する
         viewModelScope.launch {
             preferencesRepository.userPreferences.collect { prefs ->
-                _uiState.update { state ->
-                    recalculate(
-                        state.copy(
-                            showMphAlongside = prefs.showMphAlongside,
-                            animationEnabled = prefs.animationEnabled,
-                            balanceFdr = prefs.balanceFdr
-                        )
+                setState { state ->
+                    state.copy(
+                        showMphAlongside = prefs.showMphAlongside,
+                        animationEnabled = prefs.animationEnabled,
+                        balanceFdr = prefs.balanceFdr
                     )
                 }
             }
         }
+    }
+
+    /**
+     * 入力に影響する状態更新の唯一の入り口（U-4 / DEBT-10）。
+     *
+     * `transform` は「状態を作るだけ」の純粋な関数に限る。再計算・クランプは
+     * ここで 1 回だけ行う。`MutableStateFlow.update {}` の中で再計算していたのを
+     * 外に出したのは次の 2 つの理由:
+     *  - `update` は CAS のリトライでラムダを何度も呼ぶ契約なので、
+     *    重い処理や副作用（例外・永続化）を置く場所ではない
+     *  - 「読んで・作って・書く」が 1 行に並ぶと、どこまでが状態遷移なのかが読めなくなる
+     *
+     * 状態変更は全てメインディスパッチャ上（UI コールバックと viewModelScope の
+     * collect）なので、CAS ループ無しの read-modify-write で足りる。
+     */
+    private fun setState(transform: (CalcUiState) -> CalcUiState) {
+        _uiState.value = recalculate(transform(_uiState.value))
     }
 
     /**
@@ -141,14 +153,13 @@ class CalcViewModel @Inject constructor(
      * Web 版と同様、タイヤ径はそのシャーシのデフォルト値に自動セットする。
      */
     fun onChassisSelected(chassisId: String) {
-        _uiState.update { state ->
-            val selected = findChassis(state.makers, chassisId) ?: return@update state
-            recalculate(
-                state.copy(
-                    selectedChassis = selected,
-                    tireMm = selected.chassis.defaultTireMm,
-                    isChassisSheetOpen = false
-                )
+        // 見つからないシャーシは無視する（シートを開いたまま DB から消えた場合）
+        val selected = findChassis(_uiState.value.makers, chassisId) ?: return
+        setState { state ->
+            state.copy(
+                selectedChassis = selected,
+                tireMm = selected.chassis.defaultTireMm,
+                isChassisSheetOpen = false
             )
         }
         persistLastCalcState()
@@ -158,19 +169,15 @@ class CalcViewModel @Inject constructor(
     // onValueChange のたびに再計算する（純粋関数なので軽い）。
     // DataStore への保存はスライダー操作確定時（onSliderChangeFinished）のみ。
 
-    fun onPinionChange(value: Int) = updateInput { it.copy(pinion = value) }
-    fun onSpurChange(value: Int) = updateInput { it.copy(spur = value) }
-    fun onKvChange(value: Int) = updateInput { it.copy(kv = value) }
-    fun onCellsChange(value: Int) = updateInput { it.copy(cells = value) }
-    fun onTireMmChange(value: Int) = updateInput { it.copy(tireMm = value) }
+    fun onPinionChange(value: Int) = setState { it.copy(pinion = value) }
+    fun onSpurChange(value: Int) = setState { it.copy(spur = value) }
+    fun onKvChange(value: Int) = setState { it.copy(kv = value) }
+    fun onCellsChange(value: Int) = setState { it.copy(cells = value) }
+    fun onTireMmChange(value: Int) = setState { it.copy(tireMm = value) }
 
     /** スライダーの操作が確定した（指が離れた）タイミングで前回状態として永続化する */
     fun onSliderChangeFinished() {
         persistLastCalcState()
-    }
-
-    private inline fun updateInput(transform: (CalcUiState) -> CalcUiState) {
-        _uiState.update { recalculate(transform(it)) }
     }
 
     // ----- 保存ダイアログ -----
