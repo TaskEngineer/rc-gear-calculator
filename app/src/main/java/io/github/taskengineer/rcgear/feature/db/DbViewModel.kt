@@ -3,8 +3,8 @@ package io.github.taskengineer.rcgear.feature.db
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.taskengineer.rcgear.data.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.model.Maker
+import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,9 +32,10 @@ class DbViewModel @Inject constructor(
     ) { makers, currentFilter ->
         val filtered = when (currentFilter) {
             DbFilter.ALL -> makers
-            DbFilter.EDITED -> makers
-                .map { maker -> maker.copy(chassis = maker.chassis.filter { it.isUserEdited }) }
-                .filter { it.chassis.isNotEmpty() }
+            DbFilter.EDITED ->
+                makers
+                    .map { maker -> maker.copy(chassis = maker.chassis.filter { it.isUserEdited }) }
+                    .filter { it.chassis.isNotEmpty() }
         }
         DbUiState(
             isLoading = false,

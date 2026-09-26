@@ -34,10 +34,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.taskengineer.rcgear.core.designsystem.theme.RcGearTheme
+import io.github.taskengineer.rcgear.core.ui.formatRatio
+import io.github.taskengineer.rcgear.core.ui.formatRpm
+import io.github.taskengineer.rcgear.core.ui.formatSpeed
 import io.github.taskengineer.rcgear.domain.model.GearCalculationResult
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
-import java.util.Locale
-import kotlin.math.roundToLong
 
 /**
  * セッティング詳細画面（PLAN Step 9）。
@@ -183,7 +184,7 @@ private fun InfoCard(state: SetupDetailUiState, setup: SavedSetup) {
             DetailRow(label = "タイヤ径", value = "${setup.tireMm}mm")
             DetailRow(
                 label = "内部減速比（保存時）",
-                value = String.format(Locale.US, "%.2f", setup.internalRatioSnapshot)
+                value = setup.internalRatioSnapshot.formatRatio()
             )
         }
     }
@@ -211,23 +212,19 @@ private fun SnapshotDiffCard(
                 color = MaterialTheme.colorScheme.tertiary
             )
             Text(
-                text = String.format(
-                    Locale.US,
-                    "保存時 %.2f / 現在 %.2f",
-                    snapshotRatio, currentRatio
-                ),
+                text = "保存時 ${snapshotRatio.formatRatio()} / 現在 ${currentRatio.formatRatio()}",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             snapshotResult?.let {
                 DetailRow(
                     label = "最高速（保存時比）",
-                    value = String.format(Locale.US, "%.1f km/h", it.topSpeedKmh)
+                    value = "${it.topSpeedKmh.formatSpeed()} km/h"
                 )
             }
             DetailRow(
                 label = "最高速（現在比）",
-                value = String.format(Locale.US, "%.1f km/h", currentResult.topSpeedKmh)
+                value = "${currentResult.topSpeedKmh.formatSpeed()} km/h"
             )
             Text(
                 text = "「CALC に流し込む」と現在のDB値で再計算されます",
@@ -252,19 +249,19 @@ private fun ResultCard(title: String, result: GearCalculationResult) {
             )
             DetailRow(
                 label = "最高速",
-                value = String.format(Locale.US, "%.1f km/h", result.topSpeedKmh)
+                value = "${result.topSpeedKmh.formatSpeed()} km/h"
             )
             DetailRow(
                 label = "1次減速比",
-                value = String.format(Locale.US, "%.2f", result.primaryRatio)
+                value = result.primaryRatio.formatRatio()
             )
             DetailRow(
                 label = "最終減速比 FDR",
-                value = String.format(Locale.US, "%.2f", result.finalDriveRatio)
+                value = result.finalDriveRatio.formatRatio()
             )
             DetailRow(
                 label = "ホイールRPM",
-                value = String.format(Locale.US, "%,d", result.wheelRpm.roundToLong())
+                value = result.wheelRpm.formatRpm()
             )
         }
     }

@@ -6,17 +6,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-
-// ============================================================
-// テーマモード列挙型
-// ============================================================
-// DataStore 側でも同じ enum を使う前提。
-// 後で domain/model/ に移しても良いが、designsystem 内に置くと
-// Theme との結合が分かりやすい。
-enum class ThemeMode { LIGHT, DARK, SYSTEM }
+import io.github.taskengineer.rcgear.domain.model.ThemeMode
 
 // ============================================================
 // RcGearTheme - アプリ全体のテーマエントリポイント

@@ -37,7 +37,7 @@ fun RcGearNavHost(
         // 派手なスライドはタブ UI では方向の意味が破綻するため使わない。
         enterTransition = {
             fadeIn(animationSpec = tween(200)) +
-                    slideInVertically(animationSpec = tween(200)) { it / 40 }
+                slideInVertically(animationSpec = tween(200)) { it / 40 }
         },
         exitTransition = { fadeOut(animationSpec = tween(150)) },
         popEnterTransition = { fadeIn(animationSpec = tween(200)) },

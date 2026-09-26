@@ -1,0 +1,10 @@
+# gradlew は Linux ランナーが sh で実行する。CRLF が混ざると
+# 「bad interpreter: /bin/sh^M」で CI が即死するので改行を固定する（S-4）。
+gradlew text eol=lf
+*.bat text eol=crlf
+
+# バイナリを誤って改行変換しない
+gradle/wrapper/gradle-wrapper.jar binary
+*.ttf binary
+*.jks binary
+*.png binary

@@ -14,9 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.taskengineer.rcgear.core.designsystem.theme.RcGearTheme
+import io.github.taskengineer.rcgear.core.ui.formatRatio
+import io.github.taskengineer.rcgear.core.ui.formatRpm
+import io.github.taskengineer.rcgear.core.ui.formatVoltage
 import io.github.taskengineer.rcgear.domain.model.GearCalculationResult
-import java.util.Locale
-import kotlin.math.roundToLong
 
 /**
  * 派生メトリックの一覧表示（PLAN Step 8）。
@@ -32,9 +33,9 @@ fun MetricsGrid(
 ) {
     // ラベルと表示値のペアに整形してから並べる
     val metrics = listOf(
-        "1次減速比" to result?.primaryRatio?.format2(),
-        "最終減速比 FDR" to result?.finalDriveRatio?.format2(),
-        "電圧" to result?.voltage?.let { String.format(Locale.US, "%.1f V", it) },
+        "1次減速比" to result?.primaryRatio?.formatRatio(),
+        "最終減速比 FDR" to result?.finalDriveRatio?.formatRatio(),
+        "電圧" to result?.voltage?.let { "${it.formatVoltage()} V" },
         "モーターRPM" to result?.motorRpm?.formatRpm(),
         "ホイールRPM" to result?.wheelRpm?.formatRpm()
     )
@@ -87,8 +88,3 @@ private fun MetricCell(
         }
     }
 }
-
-private fun Double.format2(): String = String.format(Locale.US, "%.2f", this)
-
-private fun Double.formatRpm(): String =
-    String.format(Locale.US, "%,d", this.roundToLong())

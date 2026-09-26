@@ -71,6 +71,10 @@ android {
 }
 
 dependencies {
+    // ===== 自プロジェクトのモジュール =====
+    // 純 Kotlin JVM のドメイン層（S-9）。Android 依存はコンパイラが弾く
+    implementation(projects.core.domain)
+
     // ===== Compose BOM（依存の先頭で宣言）=====
     implementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -120,8 +124,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-
-    // Google Fonts を Compose で使うための依存
-    // （カタログ経由、BOM がバージョンを管理）
-    implementation(libs.androidx.compose.ui.text.google.fonts)
+    // Room の MigrationTestHelper / DAO テスト用。schemas/ は androidTest の assets に登録済み
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 }

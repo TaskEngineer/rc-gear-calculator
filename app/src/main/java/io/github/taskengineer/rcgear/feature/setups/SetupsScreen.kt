@@ -109,7 +109,7 @@ private fun SetupCard(
             ) {
                 Text(
                     text = "P${item.setup.pinion}T / S${item.setup.spur}T  " +
-                            "${item.setup.kv}KV  ${item.setup.cells}S  ${item.setup.tireMm}mm",
+                        "${item.setup.kv}KV  ${item.setup.cells}S  ${item.setup.tireMm}mm",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)

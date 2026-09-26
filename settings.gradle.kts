@@ -20,5 +20,9 @@ dependencyResolutionManagement {
     }
 }
 
+// projects.core.domain のような型安全なプロジェクト参照を使えるようにする
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 rootProject.name = "RcGear"
 include(":app")
+include(":core:domain")

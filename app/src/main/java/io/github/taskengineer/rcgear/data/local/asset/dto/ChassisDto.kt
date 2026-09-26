@@ -12,9 +12,9 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class ChassisDto(
-    @SerialName("id")            val id: String,
-    @SerialName("name")          val name: String,
-    @SerialName("internalRatio") val internalRatio: Double,  // JSON: "internalRatio"
-    @SerialName("defaultTireMm") val defaultTireMm: Int,     // JSON: "defaultTireMm"
-    @SerialName("note")          val note: String? = null
+    @SerialName("id") val id: String,
+    @SerialName("name") val name: String,
+    @SerialName("internalRatio") val internalRatio: Double, // JSON: "internalRatio"
+    @SerialName("defaultTireMm") val defaultTireMm: Int, // JSON: "defaultTireMm"
+    @SerialName("note") val note: String? = null
 )

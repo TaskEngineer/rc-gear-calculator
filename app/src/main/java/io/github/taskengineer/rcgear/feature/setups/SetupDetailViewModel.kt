@@ -5,14 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.taskengineer.rcgear.core.common.CalcRequestBus
-import io.github.taskengineer.rcgear.core.domain.GearCalculator
-import io.github.taskengineer.rcgear.data.repository.ChassisRepository
-import io.github.taskengineer.rcgear.data.repository.PreferencesRepository
-import io.github.taskengineer.rcgear.data.repository.SetupRepository
+import io.github.taskengineer.rcgear.domain.calculator.GearCalculator
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.GearCalculationResult
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
+import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
+import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
+import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -103,12 +103,29 @@ class SetupDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 保存値から計算する。値が有効範囲外なら計算せず null を返す（REF-1 / BUG-2）。
+     *
+     * インポート時の検証（ImportDataUseCase）で範囲外は弾くようになったが、
+     * それ以前に取り込まれた行が DB に残っている可能性がある。ここで例外を
+     * 投げると詳細画面を開いただけでアプリが落ち、しかもその行を削除する
+     * 画面にたどり着けなくなるため、結果を伏せるだけにとどめる。
+     */
     private fun calculate(
         setup: SavedSetup,
         internalRatio: Double,
         balanceFdr: Double
-    ): GearCalculationResult =
-        GearCalculator.calculate(
+    ): GearCalculationResult? {
+        val isValid = GearCalculationInput.isValid(
+            pinion = setup.pinion,
+            spur = setup.spur,
+            internalRatio = internalRatio,
+            kv = setup.kv,
+            cells = setup.cells,
+            tireMm = setup.tireMm
+        )
+        if (!isValid) return null
+        return GearCalculator.calculate(
             GearCalculationInput(
                 pinion = setup.pinion,
                 spur = setup.spur,
@@ -119,6 +136,7 @@ class SetupDetailViewModel @Inject constructor(
             ),
             balanceFdr
         )
+    }
 }
 
 /**

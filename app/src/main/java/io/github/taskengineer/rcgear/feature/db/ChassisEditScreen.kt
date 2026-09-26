@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.util.Locale
+import io.github.taskengineer.rcgear.core.ui.formatRatio
 
 /**
  * シャーシ編集画面（PLAN Step 10）。
@@ -103,11 +103,7 @@ fun ChassisEditScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = String.format(
-                                Locale.US,
-                                "内部減速比 %.2f  /  タイヤ径 %dmm",
-                                standard.internalRatio, standard.defaultTireMm
-                            ),
+                            text = "内部減速比 ${standard.internalRatio.formatRatio()}  /  タイヤ径 ${standard.defaultTireMm}mm",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )

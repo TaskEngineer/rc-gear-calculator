@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -30,11 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.taskengineer.rcgear.BuildConfig
-import io.github.taskengineer.rcgear.core.designsystem.theme.ThemeMode
+import io.github.taskengineer.rcgear.core.ui.formatSpeed
+import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -96,7 +97,7 @@ fun ConfigScreen(
             ConfigRow(
                 title = "基準 FDR",
                 subtitle = "セッティング傾向バーの中央となる最終減速比",
-                value = String.format(Locale.US, "%.1f", state.preferences.balanceFdr),
+                value = state.preferences.balanceFdr.formatSpeed(),
                 onClick = viewModel::onBalanceFdrDialogOpen
             )
 

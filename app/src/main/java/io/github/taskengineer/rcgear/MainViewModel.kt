@@ -3,8 +3,8 @@ package io.github.taskengineer.rcgear
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.taskengineer.rcgear.core.designsystem.theme.ThemeMode
-import io.github.taskengineer.rcgear.data.repository.PreferencesRepository
+import io.github.taskengineer.rcgear.domain.model.ThemeMode
+import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map

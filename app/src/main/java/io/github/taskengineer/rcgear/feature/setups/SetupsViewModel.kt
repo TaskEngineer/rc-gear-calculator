@@ -3,9 +3,9 @@ package io.github.taskengineer.rcgear.feature.setups
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.taskengineer.rcgear.data.repository.ChassisRepository
-import io.github.taskengineer.rcgear.data.repository.SetupRepository
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
+import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
+import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine

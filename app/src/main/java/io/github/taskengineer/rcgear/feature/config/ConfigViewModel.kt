@@ -4,13 +4,14 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.taskengineer.rcgear.core.designsystem.theme.ThemeMode
+import io.github.taskengineer.rcgear.core.ui.formatSpeed
 import io.github.taskengineer.rcgear.data.local.file.JsonFileDataSource
-import io.github.taskengineer.rcgear.data.repository.CalculationHistoryRepository
-import io.github.taskengineer.rcgear.data.repository.ChassisRepository
-import io.github.taskengineer.rcgear.data.repository.PreferencesRepository
-import io.github.taskengineer.rcgear.data.repository.SetupRepository
+import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
+import io.github.taskengineer.rcgear.domain.repository.CalculationHistoryRepository
+import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
+import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
+import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import io.github.taskengineer.rcgear.domain.usecase.ExportDataUseCase
 import io.github.taskengineer.rcgear.domain.usecase.ImportDataUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -75,7 +75,7 @@ class ConfigViewModel @Inject constructor(
     fun onBalanceFdrDialogOpen() {
         _uiState.update {
             it.copy(
-                balanceFdrInput = String.format(Locale.US, "%.1f", it.preferences.balanceFdr),
+                balanceFdrInput = it.preferences.balanceFdr.formatSpeed(),
                 showBalanceFdrDialog = true,
                 balanceFdrError = null
             )
@@ -122,9 +122,17 @@ class ConfigViewModel @Inject constructor(
                             message = buildString {
                                 append("取り込み完了: ")
                                 append("セッティング ${result.importedSetups}件")
-                                if (result.skippedSetups > 0) append("（同名スキップ ${result.skippedSetups}件）")
+                                val setupNotes = buildList {
+                                    if (result.skippedSetups > 0) add("同名スキップ ${result.skippedSetups}件")
+                                    if (result.invalidSetups > 0) add("値が不正 ${result.invalidSetups}件")
+                                }
+                                if (setupNotes.isNotEmpty()) append(setupNotes.joinToString("・", "（", "）"))
                                 append(" / 上書き ${result.importedOverrides}件")
-                                if (result.skippedOverrides > 0) append("（不明シャーシ ${result.skippedOverrides}件）")
+                                val overrideNotes = buildList {
+                                    if (result.skippedOverrides > 0) add("不明シャーシ ${result.skippedOverrides}件")
+                                    if (result.invalidOverrides > 0) add("値が不正 ${result.invalidOverrides}件")
+                                }
+                                if (overrideNotes.isNotEmpty()) append(overrideNotes.joinToString("・", "（", "）"))
                             }
                         )
                     }

@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.taskengineer.rcgear.core.designsystem.theme.RcGearTheme
-import java.util.Locale
+import io.github.taskengineer.rcgear.core.ui.formatSpeed
 
 /**
  * メインHUD: 理論最高速度の大型表示（PLAN Step 8 / アニメーションは Step 12）。
@@ -68,7 +68,7 @@ fun SpeedHud(
                 Text(
                     // 小数1桁（PLAN 9.1）。ロケール依存の小数点記号を避けるため Locale.US 固定
                     text = if (topSpeedKmh != null) {
-                        String.format(Locale.US, "%.1f", animatedKmh)
+                        animatedKmh.formatSpeed()
                     } else {
                         "--.-"
                     },
@@ -85,7 +85,7 @@ fun SpeedHud(
             if (showMph) {
                 Text(
                     text = if (topSpeedMph != null) {
-                        String.format(Locale.US, "%.1f mph", animatedMph)
+                        "${animatedMph.formatSpeed()} mph"
                     } else {
                         "--.- mph"
                     },
