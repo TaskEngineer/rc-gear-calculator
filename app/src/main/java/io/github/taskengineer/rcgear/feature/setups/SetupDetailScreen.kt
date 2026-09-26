@@ -1,38 +1,28 @@
 package io.github.taskengineer.rcgear.feature.setups
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Input
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.taskengineer.rcgear.core.designsystem.component.LabeledRow
 import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
-import io.github.taskengineer.rcgear.core.designsystem.component.RcTopAppBar
 import io.github.taskengineer.rcgear.core.designsystem.component.ValueDiffHeader
 import io.github.taskengineer.rcgear.core.designsystem.component.ValueDiffRow
+import io.github.taskengineer.rcgear.core.ui.RcDetailScaffold
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.core.ui.formatRpm
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
@@ -57,82 +47,57 @@ fun SetupDetailScreen(
     viewModel: SetupDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val setup = state.setup
 
-    // 削除完了 or 対象が見つからない場合は一覧へ戻る
-    LaunchedEffect(state.isDeleted, state.notFound) {
-        if (state.isDeleted || state.notFound) onNavigateBack()
-    }
-
-    Scaffold(
+    RcDetailScaffold(
+        title = setup?.name ?: "セッティング詳細",
+        onNavigateBack = onNavigateBack,
+        events = viewModel.events,
+        isLoading = state.isLoading || setup == null,
         modifier = modifier,
-        topBar = {
-            RcTopAppBar(
-                title = state.setup?.name ?: "セッティング詳細",
-                onNavigateBack = onNavigateBack,
-                backContentDescription = "戻る",
-                actions = {
-                    IconButton(onClick = viewModel::onDeleteClick) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "削除",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        val setup = state.setup
-        if (state.isLoading || setup == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+        backContentDescription = "戻る",
+        actions = {
+            IconButton(onClick = viewModel::onDeleteClick) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "削除",
+                    tint = MaterialTheme.colorScheme.error
+                )
             }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        }
+    ) {
+        if (setup != null) {
+            // ---- 基本情報 ----
+            InfoCard(state = state, setup = setup)
+
+            // ---- スナップショット差分（差がある場合のみ） ----
+            state.currentResult?.let { current ->
+                SnapshotDiffCard(
+                    snapshotRatio = setup.internalRatioSnapshot,
+                    currentRatio = state.chassis?.internalRatio ?: 0.0,
+                    snapshotResult = state.snapshotResult,
+                    currentResult = current
+                )
+            }
+
+            // ---- 計算結果（保存時の値） ----
+            state.snapshotResult?.let { result ->
+                ResultCard(
+                    title = if (state.currentResult != null) "計算結果（保存時の内部減速比）" else "計算結果",
+                    result = result
+                )
+            }
+
+            // ---- CALC へ流し込む ----
+            Button(
+                onClick = { onLoadToCalc(setup.id) },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // ---- 基本情報 ----
-                InfoCard(state = state, setup = setup)
-
-                // ---- スナップショット差分（差がある場合のみ） ----
-                state.currentResult?.let { current ->
-                    SnapshotDiffCard(
-                        snapshotRatio = setup.internalRatioSnapshot,
-                        currentRatio = state.chassis?.internalRatio ?: 0.0,
-                        snapshotResult = state.snapshotResult,
-                        currentResult = current
-                    )
-                }
-
-                // ---- 計算結果（保存時の値） ----
-                state.snapshotResult?.let { result ->
-                    ResultCard(
-                        title = if (state.currentResult != null) "計算結果（保存時の内部減速比）" else "計算結果",
-                        result = result
-                    )
-                }
-
-                // ---- CALC へ流し込む ----
-                Button(
-                    onClick = { onLoadToCalc(setup.id) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Input, contentDescription = null)
-                    Text(
-                        text = "CALC に流し込む",
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
+                Icon(Icons.AutoMirrored.Filled.Input, contentDescription = null)
+                Text(
+                    text = "CALC に流し込む",
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             }
         }
     }
@@ -141,7 +106,7 @@ fun SetupDetailScreen(
         AlertDialog(
             onDismissRequest = viewModel::onDeleteConfirmDismiss,
             title = { Text("削除の確認") },
-            text = { Text("「${state.setup?.name}」を削除しますか？この操作は取り消せません。") },
+            text = { Text("「${setup?.name}」を削除しますか？この操作は取り消せません。") },
             confirmButton = {
                 TextButton(onClick = viewModel::onDeleteConfirm) {
                     Text("削除", color = MaterialTheme.colorScheme.error)

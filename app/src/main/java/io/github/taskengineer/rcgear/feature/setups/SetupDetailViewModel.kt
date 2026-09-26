@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.core.ui.ScreenEvent
+import io.github.taskengineer.rcgear.core.ui.ScreenEvents
 import io.github.taskengineer.rcgear.domain.calculator.GearCalculator
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
@@ -13,6 +15,7 @@ import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
 import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import io.github.taskengineer.rcgear.navigation.setupDetailRoute
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,12 +45,17 @@ class SetupDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SetupDetailUiState())
     val uiState: StateFlow<SetupDetailUiState> = _uiState.asStateFlow()
 
+    private val screenEvents = ScreenEvents()
+
+    /** 画面を閉じる等の一度きりの出来事（U-2） */
+    val events: Flow<ScreenEvent> = screenEvents.flow
+
     init {
         viewModelScope.launch {
             val setup = setupRepository.getById(setupId)
             if (setup == null) {
                 // 削除直後に戻ってきた等のケース。閉じるだけ
-                _uiState.update { it.copy(isLoading = false, notFound = true) }
+                screenEvents.emit(ScreenEvent.NavigateBack)
                 return@launch
             }
 
@@ -88,7 +96,8 @@ class SetupDetailViewModel @Inject constructor(
     fun onDeleteConfirm() {
         viewModelScope.launch {
             setupRepository.delete(setupId)
-            _uiState.update { it.copy(showDeleteConfirm = false, isDeleted = true) }
+            _uiState.update { it.copy(showDeleteConfirm = false) }
+            screenEvents.emit(ScreenEvent.NavigateBack)
         }
     }
 
@@ -133,8 +142,8 @@ class SetupDetailViewModel @Inject constructor(
  * @property chassis        現在のシャーシDB値（上書き合成済み）。DBから消えていたら null
  * @property snapshotResult 保存時スナップショット比での計算結果
  * @property currentResult  現在のDB値での計算結果。スナップショットと同値なら null（差分なし）
- * @property isDeleted      削除完了。UI 側はこれを見て前の画面に戻る
- * @property notFound       セッティングが見つからない（削除済みIDへの遷移など）
+ *
+ * 削除完了・対象なしは状態ではなく [ScreenEvent.NavigateBack] で流す（U-2）。
  */
 data class SetupDetailUiState(
     val isLoading: Boolean = true,
@@ -142,7 +151,5 @@ data class SetupDetailUiState(
     val chassis: Chassis? = null,
     val snapshotResult: GearCalculationResult? = null,
     val currentResult: GearCalculationResult? = null,
-    val showDeleteConfirm: Boolean = false,
-    val isDeleted: Boolean = false,
-    val notFound: Boolean = false
+    val showDeleteConfirm: Boolean = false
 )

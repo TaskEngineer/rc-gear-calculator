@@ -4,11 +4,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.core.ui.ScreenEvent
+import io.github.taskengineer.rcgear.core.ui.ScreenEvents
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.navigation.chassisEditRoute
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,12 +39,17 @@ class ChassisEditViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ChassisEditUiState())
     val uiState: StateFlow<ChassisEditUiState> = _uiState.asStateFlow()
 
+    private val screenEvents = ScreenEvents()
+
+    /** 画面を閉じる等の一度きりの出来事（U-2） */
+    val events: Flow<ScreenEvent> = screenEvents.flow
+
     init {
         viewModelScope.launch {
             val standard = chassisRepository.getStandardChassisById(chassisId)
             val current = chassisRepository.getChassisById(chassisId)
             if (standard == null || current == null) {
-                _uiState.update { it.copy(isLoading = false, notFound = true) }
+                screenEvents.emit(ScreenEvent.NavigateBack)
                 return@launch
             }
             _uiState.update {
@@ -109,7 +117,7 @@ class ChassisEditViewModel @Inject constructor(
                 defaultTireMm = tire.takeIf { it != standard.defaultTireMm },
                 note = note.takeIf { it.isNotEmpty() && it != standard.note.orEmpty() }
             )
-            _uiState.update { it.copy(isDone = true) }
+            screenEvents.emit(ScreenEvent.NavigateBack)
         }
     }
 
@@ -126,7 +134,8 @@ class ChassisEditViewModel @Inject constructor(
     fun onResetConfirm() {
         viewModelScope.launch {
             chassisRepository.resetOverride(chassisId)
-            _uiState.update { it.copy(showResetConfirm = false, isDone = true) }
+            _uiState.update { it.copy(showResetConfirm = false) }
+            screenEvents.emit(ScreenEvent.NavigateBack)
         }
     }
 }
@@ -134,8 +143,8 @@ class ChassisEditViewModel @Inject constructor(
 /**
  * @property standard   JSON 由来の標準値（上書き適用前）
  * @property current    現在の有効値（上書き合成済み）。isUserEdited でリセットボタンの表示を決める
- * @property isDone     保存・リセット完了。UI 側はこれを見て前の画面に戻る
- * @property notFound   対象シャーシが見つからない
+ *
+ * 保存・リセット完了と「対象なし」は状態ではなく [ScreenEvent.NavigateBack] で流す（U-2）。
  */
 data class ChassisEditUiState(
     val isLoading: Boolean = true,
@@ -145,7 +154,5 @@ data class ChassisEditUiState(
     val tireInput: String = "",
     val noteInput: String = "",
     val errorMessage: String? = null,
-    val showResetConfirm: Boolean = false,
-    val isDone: Boolean = false,
-    val notFound: Boolean = false
+    val showResetConfirm: Boolean = false
 )
