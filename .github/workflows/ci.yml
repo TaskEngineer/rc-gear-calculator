@@ -31,6 +31,10 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # 一番速く落ちるものから順に。整形崩れでテストを待たせる必要はない。
+      - name: ktlint
+        run: ./gradlew ktlintCheck --console=plain
+
       # ドメイン層は Android を経由せず最速で回る。
       # ここが落ちるならビルドを続ける意味がないので先に実行する。
       - name: Domain tests

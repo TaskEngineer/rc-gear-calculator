@@ -5,12 +5,12 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.taskengineer.rcgear.domain.model.Maker
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import javax.inject.Inject
 
 /**
  * DB 画面（シャーシDB管理）の ViewModel（PLAN Step 10）。
@@ -32,9 +32,10 @@ class DbViewModel @Inject constructor(
     ) { makers, currentFilter ->
         val filtered = when (currentFilter) {
             DbFilter.ALL -> makers
-            DbFilter.EDITED -> makers
-                .map { maker -> maker.copy(chassis = maker.chassis.filter { it.isUserEdited }) }
-                .filter { it.chassis.isNotEmpty() }
+            DbFilter.EDITED ->
+                makers
+                    .map { maker -> maker.copy(chassis = maker.chassis.filter { it.isUserEdited }) }
+                    .filter { it.chassis.isNotEmpty() }
         }
         DbUiState(
             isLoading = false,

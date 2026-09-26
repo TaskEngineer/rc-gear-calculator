@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.taskengineer.rcgear.core.designsystem.theme.RcGearTheme
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
-import java.util.Locale
 
 /**
  * メインHUD: 理論最高速度の大型表示（PLAN Step 8 / アニメーションは Step 12）。

@@ -1,10 +1,10 @@
 package io.github.taskengineer.rcgear.core.ui
 
-import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.util.Locale
 
 /**
  * 表示整形のテスト（REF-6 / S-7）。

@@ -1,7 +1,11 @@
+// タイポグラフィは「1 行 1 スタイル」の表として書いている。
+// 折り返すと縦に読めなくなり、スタイル間の差分（fontSize / lineHeight）が
+// 比較しづらくなるので、このファイルだけ行長制限を外す（S-3）。
+@file:Suppress("ktlint:standard:max-line-length")
+
 package io.github.taskengineer.rcgear.core.designsystem.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -73,7 +77,7 @@ val RcGearTypography = Typography(
 // 大型の最高速表示など、displayLarge より更に大きく/個性的にしたい場合のスロット。
 
 data class RcGearExtendedTypography(
-    val hudMega: TextStyle,   // 最高速の超大型表示用
+    val hudMega: TextStyle, // 最高速の超大型表示用
     val hudMetric: TextStyle, // 派生メトリック（FDR, RPM等）の数値表示
     val hudUnit: TextStyle    // 単位（km/h, RPM 等）の小型表示
 )

@@ -14,12 +14,12 @@ import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
 import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import io.github.taskengineer.rcgear.domain.usecase.ExportDataUseCase
 import io.github.taskengineer.rcgear.domain.usecase.ImportDataUseCase
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * CONFIG 画面の ViewModel（PLAN Step 11）。

@@ -7,11 +7,11 @@ import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.backup.BackupData
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * [BackupCodec] の kotlinx.serialization 実装（schemaVersion 1）。

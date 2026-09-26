@@ -4,9 +4,9 @@ import io.github.taskengineer.rcgear.data.local.datastore.UserPreferencesDataSou
 import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.flow.Flow
 
 /**
  * [PreferencesRepository] の DataStore 実装。

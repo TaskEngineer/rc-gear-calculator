@@ -1,0 +1,45 @@
+root = true
+
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Kotlin 公式スタイル（gradle.properties の kotlin.code.style=official と揃える）。
+# ktlint 既定の ktlint_official はもっと強い意見を持っていて、既存コードとの
+# 差分が大きくなりすぎるので採らない（S-3）。
+ktlint_code_style = intellij_idea
+
+# 140 にしているのは、日本語コメントが多く 120 だと機械的に折り返される行が
+# 増えるだけで読みやすくならないため。コードの実行行はほぼ 110 以内に収まっている。
+max_line_length = 140
+
+# 末尾カンマは既存コードで使っていない。入れると全引数リストが差分になる
+ij_kotlin_allow_trailing_comma = false
+ij_kotlin_allow_trailing_comma_on_call_site = false
+
+# @Composable は大文字始まりが慣習なので関数名規則の対象外にする
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# ----- 無効化するルールと、その理由 -----
+# ktlint の既定は「ktlint が正しいと思う整形」に寄せてくるが、次の 4 つは
+# このコードベースが意図してやっている読みやすい書き方を壊す方向に働くので切る。
+# 理由を残しておかないと、後で同じ検討をやり直すことになる。
+#
+# no-multi-spaces:
+#   桁揃えを潰す。Color.kt の色パレットと Type.kt のタイポグラフィ表は
+#   表として縦に読む前提なので、揃っているほうが速く読める。90 件中 77 件がそれ。
+# argument-list-wrapping:
+#   「複数行にするなら 1 引数 1 行」を強制する。指摘はほぼ GearCalculatorTest の
+#   期待値テーブルと Type.kt のフォント定義で、どちらも 1 行 1 レコードで読ませたい表。
+# function-signature:
+#   関数シグネチャを ktlint 流に書き換える（146 件）。max_line_length まで 1 行に
+#   詰める方向に動くため、「引数が多いときは 1 行 1 引数」という現在の書き方が崩れる。
+# discouraged-comment-location:
+#   引数リストの行末コメントを禁止する。Shape.kt / Type.kt で「この数値が何か」を
+#   行末に書いているのを別行に追い出すだけなので益がない。
+ktlint_standard_no-multi-spaces = disabled
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_function-signature = disabled
+ktlint_standard_discouraged-comment-location = disabled

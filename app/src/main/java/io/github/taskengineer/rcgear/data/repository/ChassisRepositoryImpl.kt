@@ -8,11 +8,11 @@ import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.Maker
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * [ChassisRepository] の実装（本アプリの中核ロジック、PLAN 4.3）。
@@ -140,11 +140,14 @@ class ChassisRepositoryImpl @Inject constructor(
      * フィールド単位で「上書きがあれば優先、なければ標準値」（PLAN 4.3）。
      */
     private fun Chassis.mergeWith(override: ChassisOverrideEntity?): Chassis =
-        if (override == null) this
-        else copy(
-            internalRatio = override.internalRatio ?: internalRatio,
-            defaultTireMm = override.defaultTireMm ?: defaultTireMm,
-            note = override.note ?: note,
-            isUserEdited = true
-        )
+        if (override == null) {
+            this
+        } else {
+            copy(
+                internalRatio = override.internalRatio ?: internalRatio,
+                defaultTireMm = override.defaultTireMm ?: defaultTireMm,
+                note = override.note ?: note,
+                isUserEdited = true
+            )
+        }
 }

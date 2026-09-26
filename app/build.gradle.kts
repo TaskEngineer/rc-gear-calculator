@@ -127,5 +127,4 @@ dependencies {
     // Room の MigrationTestHelper / DAO テスト用。schemas/ は androidTest の assets に登録済み
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.kotlinx.coroutines.test)
-
 }
