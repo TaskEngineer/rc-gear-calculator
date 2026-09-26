@@ -3,11 +3,13 @@ package io.github.taskengineer.rcgear.feature.db
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
+import io.github.taskengineer.rcgear.navigation.ChassisEdit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,8 +31,8 @@ class ChassisEditViewModel @Inject constructor(
     private val chassisRepository: ChassisRepository
 ) : ViewModel() {
 
-    // ナビゲーション引数 "db/{chassisId}" から取得
-    private val chassisId: String = checkNotNull(savedStateHandle["chassisId"])
+    // ナビゲーション引数（型安全ルート [ChassisEdit] の chassisId）から取得（S-12）
+    private val chassisId: String = savedStateHandle.toRoute<ChassisEdit>().chassisId
 
     private val _uiState = MutableStateFlow(ChassisEditUiState())
     val uiState: StateFlow<ChassisEditUiState> = _uiState.asStateFlow()

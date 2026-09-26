@@ -3,6 +3,7 @@ package io.github.taskengineer.rcgear.feature.setups
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.taskengineer.rcgear.core.common.CalcRequestBus
 import io.github.taskengineer.rcgear.domain.calculator.GearCalculator
@@ -13,6 +14,7 @@ import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
 import io.github.taskengineer.rcgear.domain.repository.SetupRepository
+import io.github.taskengineer.rcgear.navigation.SetupDetail
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,8 +39,8 @@ class SetupDetailViewModel @Inject constructor(
     private val calcRequestBus: CalcRequestBus
 ) : ViewModel() {
 
-    // ナビゲーション引数 "setups/{setupId}" から取得
-    private val setupId: Long = checkNotNull(savedStateHandle["setupId"])
+    // ナビゲーション引数（型安全ルート [SetupDetail] の setupId）から取得（S-12）
+    private val setupId: Long = savedStateHandle.toRoute<SetupDetail>().setupId
 
     private val _uiState = MutableStateFlow(SetupDetailUiState())
     val uiState: StateFlow<SetupDetailUiState> = _uiState.asStateFlow()
