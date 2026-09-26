@@ -46,14 +46,15 @@ import io.github.taskengineer.rcgear.domain.model.SavedSetup
  * - 保存値の一覧表示
  * - スナップショット差分表示（PLAN 9.5）: 内部減速比が保存時と現在で異なる場合、
  *   「保存時 2.60 / 現在 2.70」の形式で両方の計算結果を並べる
- * - 「CALC に流し込む」ボタン → CALC タブへ遷移（PLAN 5.3）
+ * - 「CALC に流し込む」ボタン → CALC 画面へ遷移（PLAN 5.3 / U-3）。
+ *   値の受け渡しはルート引数なので、この画面は setupId を渡すだけ
  * - 削除（確認ダイアログ付き）
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupDetailScreen(
     onNavigateBack: () -> Unit,
-    onLoadToCalc: () -> Unit,
+    onLoadToCalc: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SetupDetailViewModel = hiltViewModel()
 ) {
@@ -131,10 +132,7 @@ fun SetupDetailScreen(
 
                 // ---- CALC へ流し込む ----
                 Button(
-                    onClick = {
-                        viewModel.onLoadToCalc()
-                        onLoadToCalc()
-                    },
+                    onClick = { onLoadToCalc(setup.id) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Filled.Input, contentDescription = null)

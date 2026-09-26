@@ -10,21 +10,29 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.SavedStateHandle
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 
+// ============================================================
+// ナビゲーションのルート定義（S-12 / REF-5）
+//
+// Navigation Compose 2.8 の型安全ルート（@Serializable なクラス）で表す。
+// 引数の名前と型はクラス定義そのものなので、"setups/$id" のような文字列組み立てと
+// navArgument の二重定義が要らない。受け取り側はこのファイル末尾のルート復元関数を使う。
+//
+// ViewModel からこのファイルを参照する（feature → navigation）が、
+// ルートは「画面の入力パラメータの宣言」なので依存として妥当と判断した。
+// ============================================================
+
 /**
- * ナビゲーションのルート定義（S-12 / REF-5）。
+ * CALC 画面。
  *
- * Navigation Compose 2.8 の型安全ルート（`@Serializable` なクラス）で表す。
- * 引数の名前と型はクラス定義そのものなので、`"setups/$id"` のような文字列組み立てと
- * `navArgument` の二重定義が要らない。受け取り側は `SavedStateHandle.toRoute<T>()`。
- *
- * ViewModel からこのファイルを参照する（`feature` → `navigation`）が、
- * ルートは「画面の入力パラメータの宣言」なので依存として妥当と判断した。
+ * @property setupId 流し込む保存セッティングの ID。null = 素のスクラッチパッド（U-3）。
+ *   ルート引数はバックスタックに載るのでプロセス death を生き延びる。
  */
 @Serializable
-data object Calc
+data class Calc(val setupId: Long? = null)
 
 @Serializable
 data object Setups
@@ -42,6 +50,30 @@ data class SetupDetail(val setupId: Long)
 /** シャーシ編集画面 */
 @Serializable
 data class ChassisEdit(val chassisId: String)
+
+// ============================================================
+// SavedStateHandle からのルート復元
+//
+// 本来は androidx.navigation の SavedStateHandle.toRoute<T>() を使うところだが、
+// あれは内部で android.os.Bundle を組み立てるため、Robolectric 無しの JVM 単体テストでは
+// "Method putString in android.os.BaseBundle not mocked" で落ちる。
+// ViewModel のテストを Robolectric 抜きで書き続けたいので、引数の読み出しだけ自前でやる
+// （SavedStateHandle には NavType が put した生の値がそのまま入っている）。
+//
+// キー名はルートクラスのプロパティ名と一致していなければならない。
+// その危ない対応関係をルート定義と同じファイルに閉じ込めるのが、この関数群の役目。
+// ============================================================
+
+/** CALC 画面のルート引数を復元する。引数なしで開かれた場合は [Calc.setupId] が null */
+fun SavedStateHandle.calcRoute(): Calc = Calc(setupId = get<Long>("setupId"))
+
+/** セッティング詳細画面のルート引数を復元する */
+fun SavedStateHandle.setupDetailRoute(): SetupDetail =
+    SetupDetail(setupId = checkNotNull(get<Long>("setupId")))
+
+/** シャーシ編集画面のルート引数を復元する */
+fun SavedStateHandle.chassisEditRoute(): ChassisEdit =
+    ChassisEdit(chassisId = checkNotNull(get<String>("chassisId")))
 
 /**
  * ボトムナビゲーションのトップレベル4タブ（PLAN 5.1）。
@@ -62,7 +94,7 @@ enum class TopLevelDestination(
     val childRoutes: List<KClass<*>> = emptyList()
 ) {
     CALC(
-        route = Calc,
+        route = Calc(),
         label = "CALC",
         title = "計算",
         selectedIcon = Icons.Filled.Speed,

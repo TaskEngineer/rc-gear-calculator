@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -31,7 +30,7 @@ fun RcGearNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Calc,
+        startDestination = Calc(),
         modifier = modifier,
         // 画面遷移アニメーション（Step 12）:
         // タブ切替はフェード + わずかな縦スライドで軽快に見せる。
@@ -55,15 +54,15 @@ fun RcGearNavHost(
         composable<SetupDetail> {
             SetupDetailScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onLoadToCalc = {
-                    // 「CALC に流し込む」特殊遷移（PLAN 5.3）:
-                    // 値の受け渡しは CalcRequestBus 経由。ここではタブを CALC に切り替えるだけ
-                    navController.navigate(Calc) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
+                onLoadToCalc = { setupId ->
+                    // 「CALC に流し込む」特殊遷移（PLAN 5.3 / U-3）:
+                    // 値はルート引数で渡す。
+                    // 既存の CALC エントリは inclusive で破棄して置き換える。
+                    // restoreState を付けると保存済みの状態（= 古い引数）が復元されて
+                    // 新しい setupId が無視されるため、ここでは使わない。
+                    navController.navigate(Calc(setupId = setupId)) {
+                        popUpTo<Calc> { inclusive = true }
                         launchSingleTop = true
-                        restoreState = true
                     }
                 }
             )

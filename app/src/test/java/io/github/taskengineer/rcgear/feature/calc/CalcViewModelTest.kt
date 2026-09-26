@@ -1,6 +1,6 @@
 package io.github.taskengineer.rcgear.feature.calc
 
-import io.github.taskengineer.rcgear.core.common.CalcRequestBus
+import androidx.lifecycle.SavedStateHandle
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
@@ -31,7 +31,7 @@ import org.junit.Test
  * 壊れても気づきにくいので、経路ごとにテストを置く。
  *
  * メソッド名のプレフィクスでカテゴリを表現
- * (init_, chassis_, slider_, clamp_, prefs_, bus_, save_)。
+ * (init_, chassis_, slider_, clamp_, prefs_, request_, save_)。
  */
 class CalcViewModelTest {
 
@@ -41,7 +41,6 @@ class CalcViewModelTest {
     private val chassisRepository = FakeChassisRepository()
     private val setupRepository = FakeSetupRepository()
     private val historyRepository = FakeCalculationHistoryRepository()
-    private val calcRequestBus = CalcRequestBus()
 
     // ----- init_ -----
 
@@ -205,14 +204,16 @@ class CalcViewModelTest {
         assertTrue("基準を変えたのにバーが動かない", vm.uiState.value.result!!.balanceIndicatorPct != before)
     }
 
-    // ----- bus_ -----
+    // ----- request_: SETUPS からの流し込み（U-3） -----
 
     @Test
-    fun `bus_SETUPS から流し込むと値とシャーシが反映される`() = runTest {
-        val vm = viewModel(prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02"))
-        advanceUntilIdle()
-
-        calcRequestBus.send(savedSetup(chassisId = "tamiya_ta08", pinion = 28, spur = 92))
+    fun `request_ルート引数のセッティングが前回値より優先される`() = runTest {
+        val stored = savedSetup(chassisId = "tamiya_ta08", pinion = 28, spur = 92)
+        setupRepository.restoreAll(listOf(stored))
+        val vm = viewModel(
+            prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02", lastPinion = 20),
+            setupId = setupRepository.stored.single().id
+        )
         advanceUntilIdle()
 
         with(vm.uiState.value) {
@@ -220,31 +221,61 @@ class CalcViewModelTest {
             assertEquals(28, pinion)
             assertEquals(92, spur)
         }
-        assertNull("受け取り後にバーが空になっていない", calcRequestBus.pendingSetup.value)
     }
 
     @Test
-    fun `bus_DB ロード前に流し込まれても取りこぼさない`() = runTest {
-        // CALC 初回表示と同時に流し込まれるケース。
-        calcRequestBus.send(savedSetup(chassisId = "tamiya_ta08", pinion = 28, spur = 92))
-
-        val vm = viewModel()
+    fun `request_流し込んだ値は前回値としても永続化される`() = runTest {
+        // プロセス death 後にランチャーから開き直しても、流し込んだ状態が残るように。
+        setupRepository.restoreAll(listOf(savedSetup(chassisId = "tamiya_ta08", pinion = 28, spur = 92)))
+        val prefs = FakePreferencesRepository()
+        val vm = viewModel(
+            preferencesRepository = prefs,
+            setupId = setupRepository.stored.single().id
+        )
         advanceUntilIdle()
 
         assertEquals("tamiya_ta08", vm.uiState.value.selectedChassis?.chassis?.id)
-        assertEquals(28, vm.uiState.value.pinion)
+        assertEquals("tamiya_ta08", prefs.current.lastSelectedChassisId)
+        assertEquals(28, prefs.current.lastPinion)
     }
 
     @Test
-    fun `bus_範囲外の値を持つ古いセッティングを流し込んでも落ちない`() = runTest {
-        val vm = viewModel()
+    fun `request_プロセス death 後に作り直しても同じ値が復元される`() = runTest {
+        // ルート引数はバックスタックに載るので、ViewModel を作り直しても残る
+        // （旧 CalcRequestBus は再生成時に空だった）。
+        setupRepository.restoreAll(listOf(savedSetup(chassisId = "tamiya_ta08", pinion = 28, spur = 92)))
+        val setupId = setupRepository.stored.single().id
+        viewModel(setupId = setupId)
         advanceUntilIdle()
 
-        calcRequestBus.send(savedSetup(chassisId = "tamiya_tt02", pinion = 5, spur = 999))
+        val recreated = viewModel(setupId = setupId)
+        advanceUntilIdle()
+
+        assertEquals("tamiya_ta08", recreated.uiState.value.selectedChassis?.chassis?.id)
+        assertEquals(28, recreated.uiState.value.pinion)
+    }
+
+    @Test
+    fun `request_範囲外の値を持つ古いセッティングを流し込んでも落ちない`() = runTest {
+        setupRepository.restoreAll(listOf(savedSetup(chassisId = "tamiya_tt02", pinion = 5, spur = 999)))
+        val vm = viewModel(setupId = setupRepository.stored.single().id)
         advanceUntilIdle()
 
         assertEquals(GearCalculationInput.MIN_PINION, vm.uiState.value.pinion)
         assertEquals(GearCalculationInput.MAX_SPUR, vm.uiState.value.spur)
+    }
+
+    @Test
+    fun `request_削除済みIDを指定されても前回値で動く`() = runTest {
+        // 詳細画面で削除 → 戻る → 同じ引数で復元、のような経路。
+        val vm = viewModel(
+            prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02", lastPinion = 22),
+            setupId = 999L
+        )
+        advanceUntilIdle()
+
+        assertEquals("tamiya_tt02", vm.uiState.value.selectedChassis?.chassis?.id)
+        assertEquals(22, vm.uiState.value.pinion)
     }
 
     // ----- save_ -----
@@ -297,17 +328,23 @@ class CalcViewModelTest {
 
     // ----- ヘルパー -----
 
+    /**
+     * @param setupId ルート引数 [Calc.setupId] に載せる値。null = 素のスクラッチパッド。
+     *   `SavedStateHandle` は実機では NavHost が詰めるので、ここでは同じキーを手で置く。
+     */
     private fun viewModel(
         chassisRepository: FakeChassisRepository = this.chassisRepository,
         preferencesRepository: FakePreferencesRepository = FakePreferencesRepository(),
-        prefs: UserPreferences? = null
+        prefs: UserPreferences? = null,
+        setupId: Long? = null
     ): CalcViewModel {
         val preferences = prefs?.let { FakePreferencesRepository(it) } ?: preferencesRepository
         return CalcViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("setupId" to setupId)),
             chassisRepository = chassisRepository,
             preferencesRepository = preferences,
-            saveSetupUseCase = SaveSetupUseCase(setupRepository, historyRepository),
-            calcRequestBus = calcRequestBus
+            setupRepository = setupRepository,
+            saveSetupUseCase = SaveSetupUseCase(setupRepository, historyRepository)
         )
     }
 
@@ -316,7 +353,7 @@ class CalcViewModelTest {
         pinion: Int,
         spur: Int
     ) = SavedSetup(
-        id = 1,
+        id = 0,
         name = "Rd1",
         chassisId = chassisId,
         pinion = pinion,

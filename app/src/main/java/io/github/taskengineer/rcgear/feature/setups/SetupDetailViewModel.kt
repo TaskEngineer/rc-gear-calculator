@@ -3,9 +3,7 @@ package io.github.taskengineer.rcgear.feature.setups
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.taskengineer.rcgear.core.common.CalcRequestBus
 import io.github.taskengineer.rcgear.domain.calculator.GearCalculator
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
@@ -14,7 +12,7 @@ import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
 import io.github.taskengineer.rcgear.domain.repository.SetupRepository
-import io.github.taskengineer.rcgear.navigation.SetupDetail
+import io.github.taskengineer.rcgear.navigation.setupDetailRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,12 +33,11 @@ class SetupDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val setupRepository: SetupRepository,
     private val chassisRepository: ChassisRepository,
-    private val preferencesRepository: PreferencesRepository,
-    private val calcRequestBus: CalcRequestBus
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     // ナビゲーション引数（型安全ルート [SetupDetail] の setupId）から取得（S-12）
-    private val setupId: Long = savedStateHandle.toRoute<SetupDetail>().setupId
+    private val setupId: Long = savedStateHandle.setupDetailRoute().setupId
 
     private val _uiState = MutableStateFlow(SetupDetailUiState())
     val uiState: StateFlow<SetupDetailUiState> = _uiState.asStateFlow()
@@ -76,16 +73,6 @@ class SetupDetailViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    // ----- CALC への流し込み（PLAN 5.3） -----
-
-    /**
-     * このセッティングを CALC に流し込む準備をする。
-     * 実際の画面遷移は UI 側（NavHost）が行う。
-     */
-    fun onLoadToCalc() {
-        _uiState.value.setup?.let { calcRequestBus.send(it) }
     }
 
     // ----- 削除 -----
