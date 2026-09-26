@@ -4,17 +4,23 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * JSON の makers 配下にある個別シャーシエントリ。
+ * chassis-db.json のシャーシ 1 件（M-7 で v2 へ）。
  *
- * JSON のキー名（"ratio", "tire"）と Kotlin のプロパティ名が異なるため、
- * @SerialName で明示的にマッピングしている。
- * Kotlin 側のプロパティ名はドメインモデルに合わせた名前（internalRatio, defaultTireMm）を使う。
+ * @property category  "touring" / "buggy" / "drift" / "other"。ツーリング専用アプリなので
+ *   一覧の絞り込みに使う。知らない値は OTHER として読む
+ * @property drive     "shaft_4wd" / "belt_4wd" / "hybrid_4wd" / "fwd" / "rwd" / "direct"。
+ *   **裏が取れていないエントリは省略する**（項目の出し分けでは不明 = 出す、として扱う）
+ * @property hasCenterDiff 同上。分かっているものだけ書く
  */
 @Serializable
 data class ChassisDto(
     @SerialName("id") val id: String,
+    @SerialName("maker") val maker: String,
     @SerialName("name") val name: String,
-    @SerialName("internalRatio") val internalRatio: Double, // JSON: "internalRatio"
-    @SerialName("defaultTireMm") val defaultTireMm: Int, // JSON: "defaultTireMm"
+    @SerialName("internalRatio") val internalRatio: Double,
+    @SerialName("defaultTireMm") val defaultTireMm: Int,
+    @SerialName("category") val category: String,
+    @SerialName("drive") val drive: String? = null,
+    @SerialName("hasCenterDiff") val hasCenterDiff: Boolean? = null,
     @SerialName("note") val note: String? = null
 )

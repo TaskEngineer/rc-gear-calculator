@@ -1,5 +1,7 @@
 package io.github.taskengineer.rcgear.domain.schema
 
+import io.github.taskengineer.rcgear.domain.model.ChassisTraits
+
 /**
  * セッティングシートの 1 セクション（M-1）。
  *
@@ -18,6 +20,13 @@ data class SectionDef(
     val fields: List<FieldDef>,
     val columns: List<ColumnDef>? = null
 ) {
+
+    /**
+     * このシャーシで出す項目だけに絞る（M-7）。
+     * 素性が不明な条件は通す（「分からないから隠す」をしない）。
+     */
+    fun visibleFields(traits: ChassisTraits): List<FieldDef> =
+        fields.filter { traits.satisfies(it.requires) }
 
     /**
      * グリッド表示用に「行キー → 列キー → 項目」へ組み替える。

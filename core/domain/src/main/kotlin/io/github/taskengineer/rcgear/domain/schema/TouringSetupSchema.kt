@@ -1,5 +1,7 @@
 package io.github.taskengineer.rcgear.domain.schema
 
+import io.github.taskengineer.rcgear.domain.model.ChassisTraits
+
 /**
  * ツーリング（オンロード）用セッティングシートの項目定義。**単一の真実**（M-1）。
  *
@@ -251,6 +253,13 @@ object TouringSetupSchema {
     /** 項目が属するセクション。未知キーなら `null` */
     fun sectionOf(fieldKey: String): SectionDef? =
         sections.firstOrNull { section -> section.fields.any { it.key == fieldKey } }
+
+    /**
+     * このシャーシで出す項目だけに絞る（M-7）。
+     * シャフト車にベルトテンション欄を出さない、といった出し分けの入口。
+     */
+    fun visibleFields(traits: ChassisTraits): List<FieldDef> =
+        allFields.filter { traits.satisfies(it.requires) }
 
     /** 使われている選択肢集合の一覧。ラベル網羅テスト（`:app`）が参照する */
     val choiceSets: List<ChoiceSet> =

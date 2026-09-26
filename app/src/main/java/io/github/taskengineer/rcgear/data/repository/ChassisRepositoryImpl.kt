@@ -50,11 +50,8 @@ class ChassisRepositoryImpl @Inject constructor(
      * 保存セッティングの詳細表示など、単発取得の用途向け。
      */
     override suspend fun getChassisById(chassisId: String): Chassis? {
-        val base = jsonProvider.getMakers()
-            .asSequence()
-            .flatMap { it.chassis }
-            .firstOrNull { it.id == chassisId }
-            ?: return null
+        // M-7 で Map 引き（O(1)）になった。v1 はメーカーを総なめしていた
+        val base = jsonProvider.getById(chassisId) ?: return null
         return base.mergeWith(overrideDao.getByChassisId(chassisId))
     }
 
@@ -63,10 +60,7 @@ class ChassisRepositoryImpl @Inject constructor(
      * シャーシ編集画面で「標準値との差分」を表示するために使う。
      */
     override suspend fun getStandardChassisById(chassisId: String): Chassis? =
-        jsonProvider.getMakers()
-            .asSequence()
-            .flatMap { it.chassis }
-            .firstOrNull { it.id == chassisId }
+        jsonProvider.getById(chassisId)
 
     /**
      * シャーシの上書きを登録・更新する。

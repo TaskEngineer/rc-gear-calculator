@@ -26,9 +26,12 @@ android {
         }
     }
 
-    // テスト用に schemas ディレクトリを追加（androidTest からアクセス可能に）
     sourceSets {
+        // androidTest から app/schemas/*.json を読めるようにする（MigrationTestHelper 用）
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        // JVM 単体テストから **出荷される現物の** assets を読めるようにする（M-7）。
+        // chassis-db.json は実行時パースなので、妥当性はテストで押さえるしかない
+        getByName("test").resources.srcDir("src/main/assets")
     }
 
     buildTypes {

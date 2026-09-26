@@ -3,7 +3,11 @@ package io.github.taskengineer.rcgear.data.local.asset
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.taskengineer.rcgear.data.local.asset.dto.ChassisDatabaseDto
+import io.github.taskengineer.rcgear.data.local.asset.dto.ChassisDto
 import io.github.taskengineer.rcgear.domain.model.Chassis
+import io.github.taskengineer.rcgear.domain.model.ChassisCategory
+import io.github.taskengineer.rcgear.domain.model.ChassisDrive
+import io.github.taskengineer.rcgear.domain.model.ChassisTraits
 import io.github.taskengineer.rcgear.domain.model.Maker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -16,23 +20,22 @@ import javax.inject.Singleton
 /**
  * assets/chassis-db.json を読み込み、ドメインモデルに変換する。
  *
- * - 起動後に初めて呼ばれた時点で読み込み、以降はメモリにキャッシュする。
- * - スレッドセーフ。Mutex で多重読み込みを防ぐ。
- * - Step 5 で ChassisRepository から DAO の Flow と合成して使う。
+ * - 起動後に初めて呼ばれた時点で読み込み、以降はメモリにキャッシュする
+ * - スレッドセーフ。Mutex で多重読み込みを防ぐ
+ * - **id での検索用に Map を持つ**（M-7）。v1 はメーカーごとのリストを総なめしていたので、
+ *   シャーシ 1 台を引くたびに全件走査していた
  */
 @Singleton
 class ChassisJsonProvider @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    // ----- 内部状態 -----
     // null = 未ロード、非null = ロード済み
     @Volatile
-    private var cached: List<Maker>? = null
+    private var cached: Loaded? = null
 
     // 多重読み込み防止用
     private val mutex = Mutex()
 
-    // kotlinx.serialization の Json インスタンス
     // - ignoreUnknownKeys: 将来 JSON に新フィールドが増えてもアプリが落ちないように
     // - prettyPrint は不要（読み込み専用なので）
     private val json = Json {
@@ -41,9 +44,17 @@ class ChassisJsonProvider @Inject constructor(
 
     /**
      * シャーシDBを取得する（メーカー単位のリスト）。
-     * 初回呼び出し時にファイルを読み込み、以降はキャッシュを返す。
+     * メーカーの並び順・各メーカー内の並び順は JSON の定義順を保つ。
      */
-    suspend fun getMakers(): List<Maker> {
+    suspend fun getMakers(): List<Maker> = load().makers
+
+    /** id での単発取得。Map 引きなので O(1)（M-7） */
+    suspend fun getById(chassisId: String): Chassis? = load().byId[chassisId]
+
+    /** 出典表記（ROADMAP P-1 で CONFIG > ABOUT に出す） */
+    suspend fun getSources(): List<String> = load().sources
+
+    private suspend fun load(): Loaded {
         // 既にキャッシュがあれば即返す（ロックを取らずに済むので軽い）
         cached?.let { return it }
 
@@ -53,29 +64,21 @@ class ChassisJsonProvider @Inject constructor(
         }
     }
 
-    /**
-     * assets から JSON を読み込み、DTO → ドメインモデルへ変換する。
-     * IO スレッドで実行。
-     */
-    private suspend fun loadFromAssets(): List<Maker> = withContext(Dispatchers.IO) {
-        // assets/chassis-db.json を文字列として読み込む
-        // use{} で AutoCloseable を確実に閉じる
+    /** assets から JSON を読み込み、DTO → ドメインモデルへ変換する。IO スレッドで実行 */
+    private suspend fun loadFromAssets(): Loaded = withContext(Dispatchers.IO) {
         val jsonText = context.assets.open(ASSET_FILE_NAME).use { input ->
             input.bufferedReader(Charsets.UTF_8).readText()
         }
-
-        // JSON → DTO
         val dto = json.decodeFromString<ChassisDatabaseDto>(jsonText)
+        val chassis = dto.chassis.map { it.toDomain() }
 
-        // DTO → ドメインモデルへマッピング
-        // Map<String, List<ChassisDto>> の順序を保つため LinkedHashMap になっているはず
-        // （kotlinx.serialization 1.7 系はデフォルトで順序保持）
-        dto.makers.map { (makerName, entries) ->
-            Maker(
-                name = makerName,
-                chassis = entries.map { it.toDomain() }
-            )
-        }
+        Loaded(
+            // メーカーの並びは JSON に現れた順。groupBy は LinkedHashMap を返すので順序が保たれる
+            makers = chassis.groupBy { it.makerName }
+                .map { (makerName, entries) -> Maker(name = makerName, chassis = entries) },
+            byId = chassis.associateBy { it.id },
+            sources = dto.sources
+        )
     }
 
     /**
@@ -86,20 +89,33 @@ class ChassisJsonProvider @Inject constructor(
         mutex.withLock { cached = null }
     }
 
+    /** 1 回のパースから作る 3 つのビュー。どれも同じ Chassis インスタンスを指す */
+    private data class Loaded(
+        val makers: List<Maker>,
+        val byId: Map<String, Chassis>,
+        val sources: List<String>
+    )
+
     companion object {
         private const val ASSET_FILE_NAME = "chassis-db.json"
     }
 }
 
-// ----- DTO → ドメインの変換拡張関数 -----
+// ----- DTO → ドメインの変換 -----
 // この階層に置くことで、ドメイン層は DTO の存在を知らずに済む。
 
-private fun io.github.taskengineer.rcgear.data.local.asset.dto.ChassisDto.toDomain(): Chassis =
-    Chassis(
-        id = id,
-        name = name,
-        internalRatio = internalRatio,
-        defaultTireMm = defaultTireMm,
-        note = note,
-        isUserEdited = false  // JSON 由来の時点では常に false。Step 5 で合成時に上書き判定する
-    )
+private fun ChassisDto.toDomain(): Chassis = Chassis(
+    id = id,
+    name = name,
+    internalRatio = internalRatio,
+    defaultTireMm = defaultTireMm,
+    makerName = maker,
+    category = ChassisCategory.fromKey(category),
+    traits = ChassisTraits(
+        drive = ChassisDrive.fromKey(drive),
+        hasCenterDiff = hasCenterDiff
+    ),
+    note = note,
+    // JSON 由来の時点では常に false。Step 5 で合成時に上書き判定する
+    isUserEdited = false
+)
