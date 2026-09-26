@@ -4,10 +4,12 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.github.taskengineer.rcgear.data.local.file.JsonBackupCodec
 import io.github.taskengineer.rcgear.data.repository.CalculationHistoryRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.ChassisRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.PreferencesRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.SetupRepositoryImpl
+import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.repository.CalculationHistoryRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
@@ -42,4 +44,8 @@ abstract class RepositoryModule {
     abstract fun bindCalculationHistoryRepository(
         impl: CalculationHistoryRepositoryImpl
     ): CalculationHistoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBackupCodec(impl: JsonBackupCodec): BackupCodec
 }

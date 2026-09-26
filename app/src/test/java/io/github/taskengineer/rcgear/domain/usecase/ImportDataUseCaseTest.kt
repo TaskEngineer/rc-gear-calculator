@@ -1,5 +1,6 @@
 package io.github.taskengineer.rcgear.domain.usecase
 
+import io.github.taskengineer.rcgear.data.local.file.JsonBackupCodec
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
@@ -24,8 +25,12 @@ import org.junit.Test
  *  - 取り込みが一括（＝トランザクション）で行われる
  *  - 既存データを壊さない（同名スキップ・不明シャーシスキップ）
  *
- * Repository が具象クラスで interface を持たないため（DEBT-5）ここでは MockK を使う。
- * S-5 で interface 化したら Fake に置き換える（REF-3 は Fake を優先する方針）。
+ * Repository は S-5 で interface 化されたので、S-6 で Fake に置き換える
+ * （REF-3 は Fake を優先する方針）。それまでは MockK のまま。
+ *
+ * [JsonBackupCodec] は本物を使う。デコードを差し替えると
+ * 「手書き JSON が実際にどう解釈されるか」というこのテストの主眼が消えるため、
+ * ここは意図的にワイヤ形式まで通す。
  *
  * メソッド名のプレフィクスでカテゴリを表現 (valid_, invalid_, duplicate_, version_, batch_)。
  */
@@ -43,7 +48,7 @@ class ImportDataUseCaseTest {
     fun setUp() {
         setupRepository = mockk()
         chassisRepository = mockk()
-        useCase = ImportDataUseCase(setupRepository, chassisRepository)
+        useCase = ImportDataUseCase(setupRepository, chassisRepository, JsonBackupCodec())
 
         // 既定: DB は空、シャーシは全て既知
         coEvery { setupRepository.existsByName(any()) } returns false

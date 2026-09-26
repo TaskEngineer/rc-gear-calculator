@@ -1,19 +1,18 @@
 package io.github.taskengineer.rcgear.domain.usecase
 
-import io.github.taskengineer.rcgear.data.local.file.dto.ExportDataDto
-import io.github.taskengineer.rcgear.data.local.file.dto.ExportedOverrideDto
-import io.github.taskengineer.rcgear.data.local.file.dto.ExportedSetupDto
+import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import javax.inject.Inject
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 
 /**
- * エクスポートJSON からデータを取り込む（PLAN Step 11）。
+ * バックアップからデータを取り込む（PLAN Step 11）。
+ *
+ * ワイヤ形式のデコードは [BackupCodec] が担当し、この UseCase は
+ * **取り込みポリシーだけ**を持つ（REF-2 / S-5）。
  *
  * マージ方針（既存データを壊さない）:
  * - セッティング: 同名が既に存在する場合はスキップ。それ以外を追加
@@ -32,10 +31,13 @@ import kotlinx.serialization.json.Json
  * 検証を通った行は Repository の一括メソッドでまとめて書き込む。Room は
  * コレクションを受ける @Insert を 1 トランザクションで実行するので、
  * 途中で失敗しても半端に取り込まれない。
+ * **ただしセッティングと上書きは別トランザクションのままで、ファイル全体の
+ * 原子性はまだ無い**（計画 M-8 で解消する）。
  */
 class ImportDataUseCase @Inject constructor(
     private val setupRepository: SetupRepository,
-    private val chassisRepository: ChassisRepository
+    private val chassisRepository: ChassisRepository,
+    private val codec: BackupCodec
 ) {
 
     sealed interface Result {
@@ -63,19 +65,11 @@ class ImportDataUseCase @Inject constructor(
         data object UnsupportedVersion : Result
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
-
-    suspend operator fun invoke(jsonText: String): Result {
-        val data = try {
-            json.decodeFromString<ExportDataDto>(jsonText)
-        } catch (e: SerializationException) {
-            return Result.InvalidFormat
-        } catch (e: IllegalArgumentException) {
-            return Result.InvalidFormat
-        }
-
-        if (data.schemaVersion > ExportDataDto.CURRENT_SCHEMA_VERSION) {
-            return Result.UnsupportedVersion
+    suspend operator fun invoke(text: String): Result {
+        val data = when (val decoded = codec.decode(text)) {
+            is BackupCodec.DecodeResult.Success -> decoded.data
+            BackupCodec.DecodeResult.InvalidFormat -> return Result.InvalidFormat
+            BackupCodec.DecodeResult.UnsupportedVersion -> return Result.UnsupportedVersion
         }
 
         // ---- セッティングの取り込み ----
@@ -86,12 +80,12 @@ class ImportDataUseCase @Inject constructor(
         // DB 既存分だけでなくこのファイル内の重複も見る。
         val seenNames = mutableSetOf<String>()
 
-        data.setups.forEach { dto ->
+        data.setups.forEach { setup ->
             when {
-                !dto.isWithinValidRange() -> invalidSetups++
-                !seenNames.add(dto.name) -> skippedSetups++
-                setupRepository.existsByName(dto.name) -> skippedSetups++
-                else -> setupsToInsert += dto.toDomain()
+                !setup.isWithinValidRange() -> invalidSetups++
+                !seenNames.add(setup.name) -> skippedSetups++
+                setupRepository.existsByName(setup.name) -> skippedSetups++
+                else -> setupsToInsert += setup
             }
         }
         setupRepository.restoreAll(setupsToInsert)
@@ -104,15 +98,17 @@ class ImportDataUseCase @Inject constructor(
         // 件数が実態とズレるので後勝ちで 1 件に畳む。
         val seenChassisIds = mutableSetOf<String>()
 
-        data.overrides.forEach { dto ->
+        data.overrides.forEach { override ->
             when {
-                !dto.isWithinValidRange() -> invalidOverrides++
-                chassisRepository.getStandardChassisById(dto.chassisId) == null -> skippedOverrides++
+                !override.isWithinValidRange() -> invalidOverrides++
+                chassisRepository.getStandardChassisById(override.chassisId) == null ->
+                    skippedOverrides++
+
                 else -> {
-                    if (!seenChassisIds.add(dto.chassisId)) {
-                        overridesToInsert.removeAll { it.chassisId == dto.chassisId }
+                    if (!seenChassisIds.add(override.chassisId)) {
+                        overridesToInsert.removeAll { it.chassisId == override.chassisId }
                     }
-                    overridesToInsert += dto.toDomain()
+                    overridesToInsert += override
                 }
             }
         }
@@ -128,10 +124,10 @@ class ImportDataUseCase @Inject constructor(
         )
     }
 
-    // ----- 検証・変換 -----
+    // ----- 検証 -----
 
     /** 全ての数値が GearCalculationInput の有効範囲に収まっているか */
-    private fun ExportedSetupDto.isWithinValidRange(): Boolean =
+    private fun SavedSetup.isWithinValidRange(): Boolean =
         name.isNotBlank() &&
             chassisId.isNotBlank() &&
             GearCalculationInput.isValid(
@@ -147,30 +143,8 @@ class ImportDataUseCase @Inject constructor(
      * 上書きの検証。null は「このフィールドは上書きしない」の意味なので有効。
      * 値が入っている場合だけ範囲を見る。
      */
-    private fun ExportedOverrideDto.isWithinValidRange(): Boolean =
+    private fun ChassisOverride.isWithinValidRange(): Boolean =
         chassisId.isNotBlank() &&
             (internalRatio == null || GearCalculationInput.isValidInternalRatio(internalRatio)) &&
             (defaultTireMm == null || defaultTireMm in GearCalculationInput.TIRE_MM_RANGE)
-
-    private fun ExportedSetupDto.toDomain(): SavedSetup = SavedSetup(
-        id = 0,
-        name = name,
-        chassisId = chassisId,
-        pinion = pinion,
-        spur = spur,
-        internalRatioSnapshot = internalRatioSnapshot,
-        kv = kv,
-        cells = cells,
-        tireMm = tireMm,
-        createdAt = createdAt,
-        updatedAt = updatedAt
-    )
-
-    private fun ExportedOverrideDto.toDomain(): ChassisOverride = ChassisOverride(
-        chassisId = chassisId,
-        internalRatio = internalRatio,
-        defaultTireMm = defaultTireMm,
-        note = note,
-        updatedAt = updatedAt
-    )
 }
