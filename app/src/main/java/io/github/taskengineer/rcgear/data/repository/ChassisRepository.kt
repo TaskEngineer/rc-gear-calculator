@@ -119,6 +119,25 @@ class ChassisRepository @Inject constructor(
         )
     }
 
+    /**
+     * インポートした上書きの一括復元（BUG-3）。
+     * 1 トランザクションで実行されるため、途中で失敗しても半端に取り込まれない。
+     */
+    suspend fun restoreAllOverrides(overrides: List<ChassisOverride>) {
+        if (overrides.isEmpty()) return
+        overrideDao.upsertAll(
+            overrides.map { override ->
+                ChassisOverrideEntity(
+                    chassisId = override.chassisId,
+                    internalRatio = override.internalRatio,
+                    defaultTireMm = override.defaultTireMm,
+                    note = override.note,
+                    updatedAt = override.updatedAt
+                )
+            }
+        )
+    }
+
     /** 上書きをリセットし、標準値（JSON値）に戻す */
     suspend fun resetOverride(chassisId: String) {
         overrideDao.deleteByChassisId(chassisId)

@@ -230,11 +230,48 @@ class CalcViewModel @Inject constructor(
 
     // ----- 内部処理 -----
 
-    /** シャーシ未選択なら result = null、選択済みなら再計算した状態を返す */
+    /**
+     * シャーシ未選択なら result = null、選択済みなら再計算した状態を返す。
+     *
+     * 入力値の防御について（REF-1 / BUG-1・BUG-2）:
+     * 状態を変える経路（前回値の復元・シャーシ選択・スライダー・SETUPS からの
+     * 流し込み）はすべてここを通る。`GearCalculationInput` は範囲外で例外を
+     * 投げるので、**計算の直前に一度だけクランプする**ことで全経路をまとめて守る。
+     * クランプ後の値を state に書き戻すため、スライダーの表示と計算結果もズレない。
+     */
     private fun recalculate(state: CalcUiState): CalcUiState {
-        val selected = state.selectedChassis ?: return state.copy(result = null)
-        val input = state.toCalculationInput(selected.chassis.internalRatio)
-        return state.copy(result = GearCalculator.calculate(input, state.balanceFdr))
+        val clamped = state.clampInputs()
+        val selected = clamped.selectedChassis ?: return clamped.copy(result = null)
+        val internalRatio = selected.chassis.internalRatio
+        // 内部減速比は上書き経由で 0 以下が入りうる。その場合は計算せず結果を伏せる
+        // （クランプできる性質の値ではないため）。
+        if (!GearCalculationInput.isValidInternalRatio(internalRatio)) {
+            return clamped.copy(result = null)
+        }
+        val input = clamped.toCalculationInput(internalRatio)
+        return clamped.copy(result = GearCalculator.calculate(input, clamped.balanceFdr))
+    }
+
+    /** 入力値を有効範囲に丸めた状態を返す。既に範囲内ならインスタンスをそのまま返す */
+    private fun CalcUiState.clampInputs(): CalcUiState {
+        val newPinion = GearCalculationInput.clampPinion(pinion)
+        val newSpur = GearCalculationInput.clampSpur(spur)
+        val newKv = GearCalculationInput.clampKv(kv)
+        val newCells = GearCalculationInput.clampCells(cells)
+        val newTireMm = GearCalculationInput.clampTireMm(tireMm)
+        val unchanged = newPinion == pinion && newSpur == spur && newKv == kv &&
+            newCells == cells && newTireMm == tireMm
+        return if (unchanged) {
+            this
+        } else {
+            copy(
+                pinion = newPinion,
+                spur = newSpur,
+                kv = newKv,
+                cells = newCells,
+                tireMm = newTireMm
+            )
+        }
     }
 
     private fun CalcUiState.toCalculationInput(internalRatio: Double) =

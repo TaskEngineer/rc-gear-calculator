@@ -75,6 +75,15 @@ class SetupRepository @Inject constructor(
     suspend fun restore(setup: SavedSetup): Long =
         setupDao.insert(setup.toEntity().copy(id = 0))
 
+    /**
+     * インポートしたセッティングの一括復元（BUG-3）。
+     * 1 トランザクションで実行されるため、途中で失敗しても半端に取り込まれない。
+     */
+    suspend fun restoreAll(setups: List<SavedSetup>) {
+        if (setups.isEmpty()) return
+        setupDao.insertAll(setups.map { it.toEntity().copy(id = 0) })
+    }
+
     /** 既存セッティングの上書き保存。createdAt は維持し updatedAt のみ更新する */
     suspend fun update(setup: SavedSetup) {
         setupDao.update(

@@ -40,6 +40,14 @@ interface SavedSetupDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(entity: SavedSetupEntity): Long
 
+    /**
+     * 複数件をまとめて登録する（インポート用、BUG-3）。
+     * Room はコレクションを受ける @Insert を 1 トランザクションで実行するため、
+     * 途中で 1 件でも失敗すれば全件ロールバックされ、半端な取り込みが起きない。
+     */
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertAll(entities: List<SavedSetupEntity>)
+
     /** 既存セッティングの更新（上書き保存） */
     @Update
     suspend fun update(entity: SavedSetupEntity)

@@ -33,19 +33,15 @@ data class GearCalculationInput(
 ) {
     init {
         // ピニオンは 1 以上。0 だと spur ÷ pinion でゼロ除算になる。
-        require(pinion >= MIN_PINION) { "pinion must be >= $MIN_PINION but was $pinion" }
-        require(pinion <= MAX_PINION) { "pinion must be <= $MAX_PINION but was $pinion" }
-        require(spur >= MIN_SPUR) { "spur must be >= $MIN_SPUR but was $spur" }
-        require(spur <= MAX_SPUR) { "spur must be <= $MAX_SPUR but was $spur" }
+        require(pinion in PINION_RANGE) { "pinion must be in $PINION_RANGE but was $pinion" }
+        require(spur in SPUR_RANGE) { "spur must be in $SPUR_RANGE but was $spur" }
         // 内部減速比は正の値。1.0 はベルト直結シャーシなどで実在する値。
-        require(internalRatio > 0.0) { "internalRatio must be > 0 but was $internalRatio" }
-        require(kv >= MIN_KV) { "kv must be >= $MIN_KV but was $kv" }
-        require(kv <= MAX_KV) { "kv must be <= $MAX_KV but was $kv" }
-        require(cells in MIN_CELLS..MAX_CELLS) {
-            "cells must be in $MIN_CELLS..$MAX_CELLS but was $cells"
+        require(isValidInternalRatio(internalRatio)) {
+            "internalRatio must be > 0 but was $internalRatio"
         }
-        require(tireMm >= MIN_TIRE_MM) { "tireMm must be >= $MIN_TIRE_MM but was $tireMm" }
-        require(tireMm <= MAX_TIRE_MM) { "tireMm must be <= $MAX_TIRE_MM but was $tireMm" }
+        require(kv in KV_RANGE) { "kv must be in $KV_RANGE but was $kv" }
+        require(cells in CELLS_RANGE) { "cells must be in $CELLS_RANGE but was $cells" }
+        require(tireMm in TIRE_MM_RANGE) { "tireMm must be in $TIRE_MM_RANGE but was $tireMm" }
     }
 
     /**
@@ -77,5 +73,51 @@ data class GearCalculationInput(
 
         /** LiPo セル 1 本の公称電圧[V] */
         const val LIPO_CELL_VOLTAGE = 3.7
+
+        // ----- 範囲判定・クランプ（REF-1: 入力値検証の一元化） -----
+        //
+        // このコンストラクタは範囲外で例外を投げる。しかし値の供給元は
+        // スライダーだけではなく、シャーシ DB の上書き（BUG-1）・エクスポート
+        // JSON のインポート（BUG-2）・DataStore に残った過去の値 もある。
+        // 各呼び出し側が自前で min/max を書くと必ずズレるため、範囲の定義と
+        // 判定・クランプはここに集約する。
+
+        val PINION_RANGE: IntRange = MIN_PINION..MAX_PINION
+        val SPUR_RANGE: IntRange = MIN_SPUR..MAX_SPUR
+        val KV_RANGE: IntRange = MIN_KV..MAX_KV
+        val CELLS_RANGE: IntRange = MIN_CELLS..MAX_CELLS
+        val TIRE_MM_RANGE: IntRange = MIN_TIRE_MM..MAX_TIRE_MM
+
+        /** 内部減速比は正の値のみ有効（上限は設けない） */
+        fun isValidInternalRatio(value: Double): Boolean = value > 0.0 && value.isFinite()
+
+        /**
+         * 全フィールドが有効範囲に収まっているか。
+         * インポート時の 1 行検証など「クランプではなく棄却したい」場面で使う。
+         */
+        fun isValid(
+            pinion: Int,
+            spur: Int,
+            internalRatio: Double,
+            kv: Int,
+            cells: Int,
+            tireMm: Int
+        ): Boolean =
+            pinion in PINION_RANGE &&
+                spur in SPUR_RANGE &&
+                isValidInternalRatio(internalRatio) &&
+                kv in KV_RANGE &&
+                cells in CELLS_RANGE &&
+                tireMm in TIRE_MM_RANGE
+
+        /**
+         * 範囲外の値を有効範囲に丸める。
+         * 「UI に出す値」を作る場面で使う（棄却すると操作不能になるため）。
+         */
+        fun clampPinion(value: Int): Int = value.coerceIn(PINION_RANGE)
+        fun clampSpur(value: Int): Int = value.coerceIn(SPUR_RANGE)
+        fun clampKv(value: Int): Int = value.coerceIn(KV_RANGE)
+        fun clampCells(value: Int): Int = value.coerceIn(CELLS_RANGE)
+        fun clampTireMm(value: Int): Int = value.coerceIn(TIRE_MM_RANGE)
     }
 }

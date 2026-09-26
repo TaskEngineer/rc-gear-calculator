@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.taskengineer.rcgear.data.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.model.Chassis
+import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,15 +77,24 @@ class ChassisEditViewModel @Inject constructor(
         val state = _uiState.value
         val standard = state.standard ?: return
 
-        // バリデーション: 数値としてパースできて正の値であること
+        // バリデーション（REF-1 / BUG-1）:
+        // ここを通った値は CALC 画面で GearCalculationInput にそのまま渡るため、
+        // 「正の数」だけでなく計算側の有効範囲まで確認する。範囲の定義は
+        // GearCalculationInput の companion が単一の真実。
         val ratio = state.ratioInput.trim().toDoubleOrNull()
-        if (ratio == null || ratio <= 0.0) {
+        if (ratio == null || !GearCalculationInput.isValidInternalRatio(ratio)) {
             _uiState.update { it.copy(errorMessage = "内部減速比は正の数値で入力してください") }
             return
         }
         val tire = state.tireInput.trim().toIntOrNull()
-        if (tire == null || tire <= 0) {
-            _uiState.update { it.copy(errorMessage = "タイヤ径は正の整数で入力してください") }
+        if (tire == null || tire !in GearCalculationInput.TIRE_MM_RANGE) {
+            _uiState.update {
+                it.copy(
+                    errorMessage = "タイヤ径は " +
+                        "${GearCalculationInput.MIN_TIRE_MM}〜${GearCalculationInput.MAX_TIRE_MM}mm " +
+                        "の整数で入力してください"
+                )
+            }
             return
         }
         val note = state.noteInput.trim()

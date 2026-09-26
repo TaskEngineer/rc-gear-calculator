@@ -122,9 +122,17 @@ class ConfigViewModel @Inject constructor(
                             message = buildString {
                                 append("取り込み完了: ")
                                 append("セッティング ${result.importedSetups}件")
-                                if (result.skippedSetups > 0) append("（同名スキップ ${result.skippedSetups}件）")
+                                val setupNotes = buildList {
+                                    if (result.skippedSetups > 0) add("同名スキップ ${result.skippedSetups}件")
+                                    if (result.invalidSetups > 0) add("値が不正 ${result.invalidSetups}件")
+                                }
+                                if (setupNotes.isNotEmpty()) append(setupNotes.joinToString("・", "（", "）"))
                                 append(" / 上書き ${result.importedOverrides}件")
-                                if (result.skippedOverrides > 0) append("（不明シャーシ ${result.skippedOverrides}件）")
+                                val overrideNotes = buildList {
+                                    if (result.skippedOverrides > 0) add("不明シャーシ ${result.skippedOverrides}件")
+                                    if (result.invalidOverrides > 0) add("値が不正 ${result.invalidOverrides}件")
+                                }
+                                if (overrideNotes.isNotEmpty()) append(overrideNotes.joinToString("・", "（", "）"))
                             }
                         )
                     }

@@ -33,6 +33,13 @@ interface ChassisOverrideDao {
     suspend fun upsert(entity: ChassisOverrideEntity)
 
     /**
+     * 複数件をまとめて登録・更新する（インポート用、BUG-3）。
+     * コレクションを受ける @Insert は Room が 1 トランザクションで実行する。
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(entities: List<ChassisOverrideEntity>)
+
+    /**
      * 上書きのリセット。レコードごと削除することで標準値（JSON値）に戻る（PLAN 6.2）。
      */
     @Query("DELETE FROM chassis_overrides WHERE chassisId = :chassisId")
