@@ -6,6 +6,7 @@ import io.github.taskengineer.rcgear.data.local.room.entity.ChassisOverrideEntit
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.Maker
+import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -13,7 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /**
- * シャーシDBのリポジトリ（本アプリの中核ロジック、PLAN 4.3）。
+ * [ChassisRepository] の実装（本アプリの中核ロジック、PLAN 4.3）。
  *
  * 標準DB（assets/chassis-db.json）と Room の上書きテーブルを合成し、
  * 最終的なシャーシ一覧を提供する。
@@ -23,16 +24,16 @@ import kotlinx.coroutines.flow.map
  *   起きるたびに合成結果が自動で流れ直す。UI 側は collect するだけでよい。
  */
 @Singleton
-class ChassisRepository @Inject constructor(
+class ChassisRepositoryImpl @Inject constructor(
     private val jsonProvider: ChassisJsonProvider,
     private val overrideDao: ChassisOverrideDao
-) {
+) : ChassisRepository {
 
     /**
      * 全メーカーのシャーシ一覧（上書き合成済み）を監視する。
      * メーカーの並び順は JSON の定義順を保持する。
      */
-    fun getAllMakers(): Flow<List<Maker>> =
+    override fun getAllMakers(): Flow<List<Maker>> =
         overrideDao.observeAll().map { overrides ->
             val overrideMap = overrides.associateBy { it.chassisId }
             jsonProvider.getMakers().map { maker ->
@@ -46,7 +47,7 @@ class ChassisRepository @Inject constructor(
      * ID 指定で1台分（上書き合成済み）を取得する。存在しなければ null。
      * 保存セッティングの詳細表示など、単発取得の用途向け。
      */
-    suspend fun getChassisById(chassisId: String): Chassis? {
+    override suspend fun getChassisById(chassisId: String): Chassis? {
         val base = jsonProvider.getMakers()
             .asSequence()
             .flatMap { it.chassis }
@@ -59,7 +60,7 @@ class ChassisRepository @Inject constructor(
      * ID 指定で標準値（JSON 由来、上書き適用前）を取得する。
      * シャーシ編集画面で「標準値との差分」を表示するために使う。
      */
-    suspend fun getStandardChassisById(chassisId: String): Chassis? =
+    override suspend fun getStandardChassisById(chassisId: String): Chassis? =
         jsonProvider.getMakers()
             .asSequence()
             .flatMap { it.chassis }
@@ -70,7 +71,7 @@ class ChassisRepository @Inject constructor(
      * すべてのフィールドが null（= 標準値と同じにしたい）の場合は、
      * 無意味なレコードを残さないようリセットとして扱う。
      */
-    suspend fun overrideChassis(
+    override suspend fun overrideChassis(
         chassisId: String,
         internalRatio: Double?,
         defaultTireMm: Int?,
@@ -92,7 +93,7 @@ class ChassisRepository @Inject constructor(
     }
 
     /** 全上書きの単発取得（エクスポート用） */
-    suspend fun getAllOverridesOnce(): List<ChassisOverride> =
+    override suspend fun getAllOverridesOnce(): List<ChassisOverride> =
         overrideDao.observeAll().first().map { entity ->
             ChassisOverride(
                 chassisId = entity.chassisId,
@@ -104,26 +105,10 @@ class ChassisRepository @Inject constructor(
         }
 
     /**
-     * インポートした上書きの復元。updatedAt を元データのまま保持して upsert する。
-     * 標準DBに存在しない chassisId のチェックは呼び出し側（ImportDataUseCase）で行う。
-     */
-    suspend fun restoreOverride(override: ChassisOverride) {
-        overrideDao.upsert(
-            ChassisOverrideEntity(
-                chassisId = override.chassisId,
-                internalRatio = override.internalRatio,
-                defaultTireMm = override.defaultTireMm,
-                note = override.note,
-                updatedAt = override.updatedAt
-            )
-        )
-    }
-
-    /**
      * インポートした上書きの一括復元（BUG-3）。
      * 1 トランザクションで実行されるため、途中で失敗しても半端に取り込まれない。
      */
-    suspend fun restoreAllOverrides(overrides: List<ChassisOverride>) {
+    override suspend fun restoreAllOverrides(overrides: List<ChassisOverride>) {
         if (overrides.isEmpty()) return
         overrideDao.upsertAll(
             overrides.map { override ->
@@ -139,12 +124,12 @@ class ChassisRepository @Inject constructor(
     }
 
     /** 上書きをリセットし、標準値（JSON値）に戻す */
-    suspend fun resetOverride(chassisId: String) {
+    override suspend fun resetOverride(chassisId: String) {
         overrideDao.deleteByChassisId(chassisId)
     }
 
     /** 全上書きをリセットする（CONFIG 画面の「全データ削除」用） */
-    suspend fun resetAllOverrides() {
+    override suspend fun resetAllOverrides() {
         overrideDao.deleteAll()
     }
 

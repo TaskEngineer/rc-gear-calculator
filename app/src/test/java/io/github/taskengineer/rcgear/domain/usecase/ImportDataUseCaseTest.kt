@@ -1,10 +1,10 @@
 package io.github.taskengineer.rcgear.domain.usecase
 
-import io.github.taskengineer.rcgear.data.repository.ChassisRepository
-import io.github.taskengineer.rcgear.data.repository.SetupRepository
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
+import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
+import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify

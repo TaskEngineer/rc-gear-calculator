@@ -1,9 +1,9 @@
 package io.github.taskengineer.rcgear.domain.usecase
 
-import io.github.taskengineer.rcgear.data.repository.CalculationHistoryRepository
-import io.github.taskengineer.rcgear.data.repository.SetupRepository
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.GearCalculationResult
+import io.github.taskengineer.rcgear.domain.repository.CalculationHistoryRepository
+import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import javax.inject.Inject
 
 /**

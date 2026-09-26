@@ -3,8 +3,8 @@ package io.github.taskengineer.rcgear.domain.usecase
 import io.github.taskengineer.rcgear.data.local.file.dto.ExportDataDto
 import io.github.taskengineer.rcgear.data.local.file.dto.ExportedOverrideDto
 import io.github.taskengineer.rcgear.data.local.file.dto.ExportedSetupDto
-import io.github.taskengineer.rcgear.data.repository.ChassisRepository
-import io.github.taskengineer.rcgear.data.repository.SetupRepository
+import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
+import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import javax.inject.Inject
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

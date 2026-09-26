@@ -5,10 +5,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.taskengineer.rcgear.core.common.CalcRequestBus
 import io.github.taskengineer.rcgear.core.domain.GearCalculator
-import io.github.taskengineer.rcgear.data.repository.ChassisRepository
-import io.github.taskengineer.rcgear.data.repository.PreferencesRepository
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.Maker
+import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
+import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
 import io.github.taskengineer.rcgear.domain.usecase.SaveSetupUseCase
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
