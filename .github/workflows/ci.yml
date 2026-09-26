@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# 同じブランチに続けて push したとき、古い実行を止めて最新だけを走らせる
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 21。開発機は Android Studio 同梱の JBR だが、
+      # gradle.properties に絶対パスを書かない方針（S-2）なので
+      # ここで JAVA_HOME を用意すればそのまま通る。
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # ドメイン層は Android を経由せず最速で回る。
+      # ここが落ちるならビルドを続ける意味がないので先に実行する。
+      - name: Domain tests
+        run: ./gradlew :core:domain:test --console=plain
+
+      - name: Unit tests
+        run: ./gradlew test --console=plain
+
+      - name: Assemble debug
+        run: ./gradlew :app:assembleDebug --console=plain
+
+      - name: Android Lint
+        run: ./gradlew :app:lintDebug --console=plain
+
+      # 落ちた原因を CI のログだけで追うのは辛いので、レポートを必ず残す
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
