@@ -10,7 +10,9 @@
 - Kotlin 2.0 / Jetpack Compose / Material 3 / Hilt / Room / DataStore / Navigation Compose。
 - `:app`（Android）＋ `:core:domain`（純 Kotlin JVM）の 2 モジュール。
   `:app` 内は引き続きパッケージで疑似分割（`core` / `data` / `feature` / `navigation`）。
-- MVP（Step 1〜12）と土台工程（Phase 0 / Phase 1）は完了。以降は `docs/ROADMAP.md` に沿って拡張する。
+- MVP（Step 1〜12）と Phase 0 / 1 / 2（ドメイン再構築）は完了。次は Phase 3（UI 構築）。
+  **現在アプリの画面は CALC / DB / CONFIG の 3 つ。** 保存セッティング（SETUPS）は
+  車 + セッティングシートに置き換わる途中で、GARAGE は Phase 3 の G-1 で入る。
 - コード内コメント・UI 文言・ドキュメントは **日本語** で統一している。新規コードも日本語コメントで書く。
 
 ## 2. ビルド・テスト（必ずこの手順で）
@@ -19,7 +21,7 @@
 # Windows / PowerShell。JAVA は PATH に無いので JAVA_HOME を明示する
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 .\gradlew.bat :app:assembleDebug --console=plain      # デバッグビルド
-.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 95 件）
+.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 251 件）
 .\gradlew.bat :core:domain:test --console=plain       # ドメインのみ（Android を経由しないので速い）
 .\gradlew.bat :app:lintDebug --console=plain          # Android Lint
 ```
@@ -60,16 +62,19 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 feature/*   Composable Screen + ViewModel + UiState（画面ごと）
     ↓
 :core:domain（純 Kotlin JVM。android を import した瞬間にビルドが落ちる）
-domain/model       Chassis, SavedSetup, GearCalculationInput/Result, UserPreferences, ThemeMode
+domain/schema      FieldDef / SectionDef / TouringSetupSchema（項目定義の単一の真実。文言は持たない）
+domain/model       Chassis, Car, SetupSheet, SetupValue(s), GearCalculationInput/Result, UserPreferences
 domain/calculator  GearCalculator（純粋関数。Web 版の計算式を移植）
+domain/validation  FieldValidator（範囲・型の検証。例外ではなく違反の一覧を返す）
+domain/diff        SheetDiff（3 つの比較軸を 1 つの純粋関数に）
 domain/repository  Repository の interface（実装は :app の data/repository/*Impl）
-domain/backup      BackupCodec（エクスポート JSON の形式は data 側の実装が知る）
-domain/common      TimeProvider
-domain/usecase     SaveSetup / ExportData / ImportData
+domain/backup      BackupCodec / LegacyBackupConverter（v1 → v2。形式は data 側の実装が知る）
+domain/common      TimeProvider / IdGenerator / TransactionRunner
+domain/usecase     ExportData / ImportData
     ↑
 :app
-data/       repository（Chassis / Setup / Preferences / CalculationHistory の *Impl）
-            local/room（Entity・DAO・RcGearDatabase v1）
+data/       repository（Chassis / Car / SetupSheet / Preferences の *Impl）
+            local/room（Entity・DAO・RcGearDatabase v2、RoomTransactionRunner）
             local/datastore（UserPreferencesDataSource）
             local/asset（ChassisJsonProvider: assets/chassis-db.json をキャッシュ）
             local/file（JsonFileDataSource: SAF の Uri へ読み書き）
@@ -77,7 +82,9 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 ```
 
 - **ChassisRepository** が中核。「同梱 JSON（読み取り専用）＋ Room の `chassis_overrides`（差分）」を Flow で合成する。
-- **CalcRequestBus**（`core/common`）は SETUPS → CALC の「流し込み」専用のシングルトン StateFlow。
+- **シートの値は EAV**（`setup_values` の `(sheetId, fieldKey)`）。項目の定義は
+  `:core:domain` の `TouringSetupSchema`、文言は `:app` の `feature/sheet/SetupFieldLabels.kt`。
+  **項目を足すのはこの 2 ファイルだけ**で、Composable は 1 行も書かない（それが崩れたら設計が壊れた合図）。
 - UiState は immutable data class。ViewModel が `MutableStateFlow.update { copy(...) }` で更新する。
 - 計算はスライダーの `onValueChange` ごとに同期実行（debounce なし）。DataStore 保存は操作確定時のみ。
 - 層違反は S-5 / S-9 で解消済み。`:core:domain` は Android プラグインを適用していないため、
@@ -122,11 +129,12 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 | やりたいこと | 触る場所 |
 |---|---|
 | 計算式・新メトリック追加 | `:core:domain` の `domain/calculator/GearCalculator.kt` → `domain/model/GearCalculationResult.kt` → `GearCalculatorTest` → `feature/calc/component/GearMetrics.kt`（表示するメトリックの一覧） |
+| **シートの項目を追加** | `domain/schema/TouringSetupSchema.kt` → `res/values/strings.xml` → `feature/sheet/SetupFieldLabels.kt` の 3 箇所だけ。忘れると `SetupFieldLabelsTest` が落ちる |
 | UI 部品を足す / 直す | `core/designsystem/component/`（ドメイン非依存。**必ず `@Preview` を付ける**）。ドメインを知る部品は `core/ui/` |
-| シャーシを追加 | `app/src/main/assets/chassis-db.json`（`id` は `メーカー_型番` のスネークケース、重複不可） |
+| シャーシを追加 | `app/src/main/assets/chassis-db.json`（v2 のフラット配列。`id` は `メーカー_型番` のスネークケース、重複不可。`category` 必須、`drive` は裏が取れたものだけ）。`ChassisDbValidityTest` が既存 id を固定している |
 | 設定項目を追加 | `domain/model/UserPreferences.kt` → `data/local/datastore/UserPreferencesDataSource.kt`（Keys）→ `PreferencesRepository` → `feature/config` |
 | 新しい画面 | `navigation/Routes.kt`（`@Serializable` ルート + 復元関数）→ `RcGearNavHost.kt` → `feature/<name>/`。詳細画面は `core/ui/RcDetailScaffold` に載せる |
-| 保存データの項目追加 | `SavedSetupEntity`（Room version++ と Migration）→ `SavedSetup` → `SetupRepository` の変換 → `ExportedSetupDto`（schemaVersion 検討） |
+| シートのヘッダ項目を追加 | `SetupSheetEntity`（Room version++ と Migration）→ `SetupSheet` / `SessionConditions` → `SetupSheetRepositoryImpl` の変換 → `ExportedSheetDto`（schemaVersion 検討）。**値（設定した内容）はヘッダではなくレジストリに足す** |
 
 ## 7. 作業前に読むもの・やること
 

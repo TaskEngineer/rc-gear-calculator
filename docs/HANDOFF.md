@@ -1,6 +1,6 @@
 # 引き継ぎ書（HANDOFF）— RcGear Android
 
-> **Status**: MVP 完了 + **セッティングシート化 Phase 0（地固め）/ Phase 1（共有 UI・文言・ナビの土台）完了**。Phase 2 未着手。
+> **Status**: MVP 完了 + **セッティングシート化 Phase 0 / Phase 1 / Phase 2（ドメイン再構築）完了**。Phase 3（UI 構築）未着手。
 > **Last Updated**: 2026-09-26
 > **対象読者**: 次にこのリポジトリを扱う AI エージェントと、その指示を出す本人。
 >
@@ -17,19 +17,21 @@
 
 | 項目 | 状態 |
 |---|---|
-| 実装範囲 | PLAN Step 1〜12 完了（CALC / SETUPS / DB / CONFIG、画像エクスポート、アイコン、R8）+ Phase 1 の土台 |
-| 共有 UI | `core/designsystem/component/` に 13 部品（全てに `@Preview`）。文言は `strings.xml`（約 110 件） |
+| 実装範囲 | PLAN Step 1〜12 + Phase 0 / 1 の土台 + **Phase 2（ドメイン再構築）**。画面は CALC / DB / CONFIG の 3 つ（SETUPS は撤去、GARAGE は Phase 3） |
+| 共有 UI | `core/designsystem/component/` に 13 部品（全てに `@Preview`）。文言は `strings.xml`（約 135 件） |
 | モジュール | `:app`（Android）＋ `:core:domain`（純 Kotlin JVM） |
-| ビルド | `:app:assembleDebug` 成功（2026-09-26 確認） |
-| 単体テスト | **95 件成功**（`:core:domain` 30 / `:app` 65）。GearCalculator・入力値検証・表示整形・UseCase 3 本・CalcViewModel・SetupDetailViewModel・JsonBackupCodec |
-| Instrumented / UI テスト | DAO テスト **6 件成功**（`app/src/androidTest/`）。2026-09-26 に AVD `Pixel_8`（API 34）で `connectedDebugAndroidTest` 実行、failures 0 / errors 0。UI テストは未着手 |
+| ビルド | `:app:assembleDebug` / `:app:lintDebug` / `ktlintCheck` 成功（2026-09-26 確認） |
+| 単体テスト | **251 件成功**（`:core:domain` 118 / `:app` 100 + 33）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 |
+| Instrumented / UI テスト | DAO テストを v2 スキーマに更新（15 件）。**Phase 2 では未実行**（エミュレータでの再実行が必要。手順は §6.1） |
 | Lint / 静的解析 | **ktlint 導入済み**（`ktlintCheck` 緑）。Android Lint も CI で実行 |
 | CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**2026-09-26 の PR #1 で初回実行、全ステップ緑**（5m14s）。instrumented テストは CI に入っていない（エミュレータが要るため。§6 参照） |
 | リリース署名 | 未設定。`versionCode = 1`、`versionName = 0.1.0` |
 | スクリーンショット | README に TODO のまま（`docs/screenshots/` 未作成） |
 | ライセンス | TBD |
 | リモート | `https://github.com/TaskEngineer/rc-gear-calculator.git` |
-| データ | シャーシ 45 エントリ / 9 メーカー、`id` 重複なし |
+| データ | シャーシ 45 エントリ / 9 メーカー、`id` 重複なし（`ChassisDbValidityTest` が固定） |
+| Room | **version 2**（`cars` / `setup_sheets` / `setup_values` / `user_chassis` / `chassis_overrides`） |
+| エクスポート JSON | **schemaVersion 2**（cars / sheets / overrides）。v1 の読み込みは永久に残す |
 
 ### 1.1 ツールチェイン（実際の値。PLAN.md の記述より新しい）
 
@@ -78,7 +80,7 @@ AGP を上げると解消する見込みだが、Gradle と AGP の互換表に�
 
 ### BUG-3: インポートがトランザクションではない（重要度: 中）
 
-**[部分解消: S-1' / 45cc235]** セッティング・上書きそれぞれを一括 insert（Room の @Insert(List) は 1 トランザクション）にした。**ファイル全体の原子性はまだ無い**（両者が別トランザクション）。計画 M-8 で解消する。
+**[解消: S-1' / 45cc235 → M-8 / 994fafb]** まず各種を一括 insert にし（Room の @Insert(List) は 1 トランザクション）、M-8 で `TransactionRunner` を入れて**ファイル全体を 1 トランザクション**にした。
 
 - `ImportDataUseCase` はセッティングと上書きを 1 件ずつ `insert` する。途中で失敗すると半端に取り込まれる。
 - 修正方針: `RcGearDatabase.withTransaction { }` で囲む。Repository に `restoreAll(List)` を追加して DAO の `@Transaction` を使う。
@@ -117,10 +119,10 @@ PLAN.md が掲げた「Domain は Pure Kotlin、依存方向は UI → Domain �
 | DEBT-5 | Repository が具象クラスで interface が無い。ViewModel / UseCase のテストで MockK に頼ることになる（MockK は依存に入っている） | **解消（S-5 / S-6）** interface 化し、`app/src/test/**/fake/` に Fake 4 種を用意。Fake は本物の制約（ユニーク名・並び順）を再現する |
 | DEBT-6 | `CalcRequestBus` はアプリスコープの可変グローバル状態。「流し込み」以外の用途が増えると追跡困難 | **解消（U-3 / 8bd116d）** ルート引数 `Calc(setupId)` に置換しクラスを削除。プロセス death で値が消える未記載の不具合も同時に解消（§5.6） |
 | DEBT-7 | ルートが文字列（`"setups/$setupId"`）。Navigation 2.8 の型安全ルート（`@Serializable` data class）に移行可能 | **解消（S-12 / acbd038）** `@Serializable` ルート + `hasRoute()` 判定。引数の読み出しだけ自前（§5.6） |
-| DEBT-8 | `calculation_history` テーブルは Insert のみで読み出し経路が無い。UI（ROADMAP F-1）を作るか、テーブルごと削除するか決める | **削除で決着予定**（Phase 2 の M-3）。セッティングシート自体がこれより良い履歴になるため |
+| DEBT-8 | `calculation_history` テーブルは Insert のみで読み出し経路が無い。UI（ROADMAP F-1）を作るか、テーブルごと削除するか決める | **解消（M-3 / 0c94124）** テーブル・DAO・Entity・Repository ごと削除した |
 | DEBT-9 | `PreferencesRepository` は `UserPreferencesDataSource` の透過的ラッパー。層を揃える以外の価値が無い | **そのまま**。interface 化で層は揃った。実害が無いので放置 |
 | DEBT-10 | `CalcViewModel.init` に 3 本の `collect` が並び、`recalculate` は例外を投げうる（BUG-1/2 の受け口）。状態遷移がテストしづらい | **部分解消**。`recalculate` が例外を投げなくなり（S-1'）、CalcViewModel のテストも入った（S-6）。`update {}` 内の再計算は **解消（U-4 / 28c437b）** `setState()` に集約。`first { !it.isLoading }` は U-3 でバスごと消えた |
-| DEBT-11 | `ExportDataUseCase` / `ImportDataUseCase` が `System.currentTimeMillis()` を直接呼ぶ。Repository も同様。時刻をテストで固定できない | **解消（S-6）** `TimeProvider` を注入。`IdGenerator` は採番する行がまだ無いので Phase 2 で追加する |
+| DEBT-11 | `ExportDataUseCase` / `ImportDataUseCase` が `System.currentTimeMillis()` を直接呼ぶ。Repository も同様。時刻をテストで固定できない | **解消（S-6 / M-4）** `TimeProvider` を注入。`IdGenerator` は採番する行（UUID 主キー）が出た M-4 で追加した |
 | DEBT-12 | `libs.versions.toml` にコメント「既存の行はそのまま、以下を追加」が残っている（作業メモの残骸） | **解消（S-10 の編集で消えた）** |
 | DEBT-13 | `res/font/` が空。Google Fonts（`ui-text-google-fonts`）経由で Roboto Mono を取得している可能性があり、**完全オフライン** の方針と矛盾しうる。ネットワーク無し・初回起動の端末で等幅フォントが出るか確認する | **解消（S-8）** Roboto Mono を `res/font/` に同梱し `ui-text-google-fonts` と `font_certs.xml` を削除。ライセンスは `assets/licenses/RobotoMono-OFL.txt` |
 
@@ -410,6 +412,83 @@ CAS ループ無しの read-modify-write で足りる。
 4. CALC でピニオンを 22T → 34T に変えてから再度流し込むと **22T に戻る**（ルート引数が効いている）
 5. `am kill` でプロセスを殺して再起動しても 22T のまま（旧バスでは消えていた）
 
+### 5.7 Phase 2 の設計判断（2026-09-26）
+
+Phase 2（M-1 〜 M-8）で決めたこと。実施順は M-1 → M-2 → M-5 → M-3 → M-4 → M-6 → M-8 → M-7 で、
+純粋なドメイン（レジストリ・値・差分）を先に固めてから Room を作り替えた。
+
+#### Phase 2 完了時点でアプリは「CALC / DB / CONFIG」の 3 タブ
+
+M-3 で `saved_setups` をテーブルごと消したので、それに乗っていた SETUPS 画面・
+`SaveSetupUseCase`・`SetupRepository`・CALC の保存ボタンと「流し込み」も同時に撤去した。
+**これは意図した中間状態**で、置き換えとなる GARAGE は Phase 3 の G-1、
+CALC ↔ シートの往復は G-5 で入る。
+
+「SETUPS を Phase 3 まで残す」案は採れなかった。残すには `saved_setups` を v2 に
+引き継いで v3 で消すことになり、破壊的再作成を「v1 → v2 の 1 回だけ」に限る決定（§5.2）と衝突する。
+
+#### 移行手順（この版を端末に入れる前にやること）
+
+1. **現行（v1）の APK で CONFIG からエクスポート**し、JSON を退避する
+2. この版を入れる（初回起動で Room が作り直される。アプリのデータは消さないこと。
+   消すと DataStore の表示設定 5 項目も失う。§5.2 の表を参照）
+3. CONFIG からその JSON をインポートする。v1 の保存セッティングは
+   **シャーシごとに 1 台の車へまとめられ、各セッティングが 1 枚のシート**になる
+
+v1 ファイルは id を持たないので、取り込みのたびに新しい UUID が振られる（＝冪等ではない）。
+2 回読むと二重になるので 1 回だけにすること。v2 以降は id upsert なので冪等。
+
+#### 範囲の検証は `GearCalculationInput` から `FieldValidator` へ
+
+M-2 で `GearCalculationInput.init` の範囲 `require` を外し、レジストリ駆動の
+`FieldValidator` に移した。`init` に残したのは **計算式が成立しない 3 条件**
+（`pinion > 0` / `spur > 0` / 内部減速比が正の有限値）だけ。
+
+理由: BUG-1 / BUG-2 はどちらも「範囲外の値が例外になって画面ごと落ちる」形で出ていた。
+セッティングシートは実測値も書ける場所なので、**スライダーの外＝存在してはいけない値ではない**。
+ゼロ除算だけを `init` に残したことで、`GearCalculator.calculate()` は
+非 null を返す全域関数のままでいられる（結果を nullable にすると全呼び出し側に分岐が増える）。
+
+`GearCalculationInput` の定数は残る。これは「CALC 画面のスライダーが動ける範囲」を表し、
+レジストリのギアセクションと同じ値であることは `TouringSetupSchemaTest` が保証する。
+
+#### 単位もラベルと同じく `:app` で解決する
+
+§5.3 で「定義は domain、文言は `:app`」と決めたが、単位（mm・°・T）も同じ扱いにした。
+`unit = "mm"` の文字列をレジストリに持たせると、出す / 出さない・前後どちらに置くかという
+表示の判断がドメインに漏れる。domain は `FieldUnit` の enum だけを持ち、記号は `strings.xml` にある。
+
+#### 取り込みの棄却は「上書きは行ごと・シートの値は項目ごと」
+
+非対称にしてある。上書きは 1 件が 1 つの値なので「行を棄却」と「値を捨てる」が同義だが、
+シートは数十項目の集まりで、1 項目の範囲外で 1 セッション分を丸ごと捨てるのは損が大きい。
+落とした項目数は取り込み結果で報告する。**レジストリに無いキーは検証対象外でそのまま保存する**
+（将来の項目が入ったファイルを読んでも値が消えない ＝ スキーマを安全に進化させる担保）。
+
+#### `hasCenterDiff` は「分からないから隠す」をしない
+
+M-7 で `category` は全 45 件に付けたが、`drive` は裏の取れたものだけ、`hasCenterDiff` は
+全件未設定にした。`ChassisTraits.satisfies()` は **不明（null）なら項目を出す**。
+分からないことを理由に設定欄が無言で消えると、ユーザーには壊れているのと区別が付かない。
+隠すのは「その車には確実に存在しない」と分かっている場合だけ。
+
+#### Fake は「ただ動く」ではなく「本物と同じ制約で動く」
+
+`FakeTransactionRunner` は実際にロールバックする（開始時の状態を控えて書き戻す）。
+ただブロックを実行するだけの Fake にすると、M-8 で入れたトランザクション境界が
+効いていなくてもテストが通ってしまう。`FakeCarRepository` / `FakeSetupSheetRepository` も
+並び順・CASCADE・SET NULL・upsert の冪等性を再現する。S-6 で同名制約を再現したのと同じ理由。
+
+#### Phase 2 で見つかった、記載の無かった問題
+
+| 内容 | 決着 |
+|---|---|
+| プロパティアクセサの中の `field` は裏フィールドを指す予約語。`FieldDiff` の `val isUnknownField get() = field == null` が「初期化が必要」でコンパイルエラーになる | `this.field` と書く。`SheetDiff.kt` にコメントを残した |
+| `saved_setups` を消すと KSP / Hilt の生成物が古いまま残り、`hiltJavaCompileDebug` が消えたクラスを探して落ちる | `app/build/generated/{ksp,hilt}` を消して再ビルドする |
+| 既存 `strings.xml` に `unit_teeth` / `unit_millimeter` / `unit_cells` が既にあった | 新規に作らず共有する。重複定義は `mergeDebugResources` が検出する |
+
+---
+
 ## 6. 運用メモ
 
 - ルートの `AGENTS.md` をエージェントが自動で読む。作業指示はそこに集約し、このファイルは「状態の記録」に使う。
@@ -441,11 +520,21 @@ $SDK = "$env:LOCALAPPDATA\Android\Sdk"
 
 ## 7. 動作確認チェックリスト（手動、リリース前）
 
+Phase 2 時点の版に合わせてある。GARAGE / シート系の項目は Phase 3 で足す。
+
 1. 初回起動: スプラッシュ → CALC、シャーシ未選択でも落ちない
 2. シャーシ選択 → タイヤ径が自動で変わる → スライダー操作 → HUD が即時更新
-3. 保存 → SETUPS に出る → 詳細で値が一致 → 「CALC に流し込む」で反映
-4. DB で内部減速比を上書き → SETUPS 詳細で「保存時 / 現在」の差分が出る → リセットで消える
+3. DB で内部減速比を上書き → CALC の結果が追従する → リセットで戻る
+4. DB で内部減速比に範囲外の値（0 や 200）を入れても落ちない
 5. CONFIG: テーマ 3 種、mph 併記 OFF、基準 FDR 変更で傾向バーの中心が動く
-6. エクスポート → 全データ削除 → インポート → 復元される（同名スキップ件数が 0）
-7. 画面回転・バックグラウンド復帰で入力値が残る
-8. 端末を機内モードにして 1〜7 が動く（オフライン要件）
+6. エクスポート → 全データ削除 → インポート → 復元される
+7. **v1 の JSON をインポート** → 車とシートが作られる（§5.7 の移行手順）
+8. 画面回転・バックグラウンド復帰で入力値が残る
+9. 端末を機内モードにして 1〜8 が動く（オフライン要件）
+
+### Phase 2 で未実施の確認
+
+- **instrumented テスト**（`RcGearDatabaseTest` を v2 スキーマに更新済み、15 件）は
+  エミュレータでの再実行が必要。外部キーの CASCADE / SET NULL は JVM テストでは見えない。手順は §6.1
+- 実機での起動確認。Phase 2 は UI をほぼ触っていないが、
+  Room v2 の作り直しは起動時にしか起きないので 1 度は動かすこと

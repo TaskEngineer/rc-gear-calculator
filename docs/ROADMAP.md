@@ -1,6 +1,6 @@
 # ロードマップ（ROADMAP）— RcGear Android
 
-> **Last Updated**: 2026-09-26
+> **Last Updated**: 2026-09-26（Phase 2 完了）
 > 負債・不具合の詳細は `HANDOFF.md`、作業ルールは `AGENTS.md`、当初計画は `PLAN.md`（凍結）。
 
 ## スコープの変更（2026-09-26）
@@ -71,18 +71,29 @@
 
 ---
 
-## Phase 2 — ドメイン再構築（本丸）
+## Phase 2 — ドメイン再構築（本丸）【完了: 2026-09-26】
 
-| ID | 内容 | 規模 |
+実施順は M-1 → M-2 → M-5 → M-3 → M-4 → M-6 → M-8 → M-7。
+純粋なドメイン（M-1 / M-2 / M-5）を先に固め、その後で Room を作り替えた。
+
+| ID | 内容 | 状態 |
 |---|---|---|
-| M-1 | `:core:domain` に `FieldDef` / `SectionDef` / `TouringSetupSchema`（ギア + 前後ダンパー + 主要サス の第 1 スライスのみ） | 中 |
-| M-2 | `SetupValue` / `SetupValues` / `toGearInput()`。`GearCalculationInput.init` の `require` を `FieldValidator` に移管 | 中 |
-| M-3 | Room v2: `cars` / `setup_sheets` / `setup_values` / `user_chassis` 追加、`saved_setups` と `calculation_history` 削除 | 大 |
-| M-4 | `CarRepository` / `SetupSheetRepository`（domain に interface、data に Impl）。`IdGenerator` 注入 | 中 |
-| M-5 | `SheetDiff.compare()` — 3 つの比較軸を 1 つの純粋関数に落とす | 小 |
-| M-6 | エクスポート JSON v2 + **v1 → v2 インポータ**。v1 の読み込みは永久に残す | 中 |
-| M-8 | インポートをファイル全体で 1 トランザクションにする（BUG-3 の積み残し） | 小 |
-| M-7 | `chassis-db.json` v2: `maker` / `category` / `drive` / `hasCenterDiff` を追加。**既存 45 個の `id` は不変**（テストで固定） | 中 |
+| M-1 | `:core:domain` に `FieldDef` / `SectionDef` / `TouringSetupSchema`（ギア + 前後ダンパー + 主要サス の第 1 スライス） | 完了 `7492800` |
+| M-2 | `SetupValue` / `SetupValues` / `toGearInput()`。`GearCalculationInput.init` の範囲 `require` を `FieldValidator` に移管 | 完了 `696f9ae` |
+| M-5 | `SheetDiff.compare()` — 3 つの比較軸を 1 つの純粋関数に落とす | 完了 `ca1db68` |
+| M-3 | Room v2: `cars` / `setup_sheets` / `setup_values` / `user_chassis` 追加、`saved_setups` と `calculation_history` 削除 | 完了 `0c94124` |
+| M-4 | `CarRepository` / `SetupSheetRepository`（domain に interface、data に Impl）。`IdGenerator` 注入 | 完了 `32af42a` |
+| M-6 | エクスポート JSON v2 + **v1 → v2 インポータ**。v1 の読み込みは永久に残す | 完了 `b431e24` |
+| M-8 | インポートをファイル全体で 1 トランザクションにする（BUG-3 の積み残し） | 完了 `994fafb` |
+| M-7 | `chassis-db.json` v2: `maker` / `category` / `drive` を追加。**既存 45 個の `id` は不変**（テストで固定） | 完了 `c7d2b9c` |
+
+到達点: 単体テスト 95 → **251 件**、Room v2（`app/schemas/2.json`）、
+エクスポート JSON v2（v1 読み込みは永続）、`getChassisById` が O(1)。
+
+**Phase 2 終了時点のアプリの状態**: タブは `[CALC] [DB] [CONFIG]` の 3 つ。
+SETUPS は `saved_setups` ごと無くなり、GARAGE は Phase 3 の G-1 で入る。
+CALC の保存と流し込みも G-5 まで一時的に外れている。
+設計判断は `HANDOFF.md` §5.7 に記録した。
 
 移行は**手動**（v1 JSON をエクスポート → 破壊的再作成 → v2 インポータで復元）。
 Room の `Migration` は書かない。理由は `HANDOFF.md` §5.2。
