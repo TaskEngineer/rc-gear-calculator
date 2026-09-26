@@ -13,7 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.feature.calc.SelectedChassis
 
@@ -41,12 +43,12 @@ fun ChassisSelectorCard(
             Column(modifier = Modifier.weight(1f)) {
                 if (selected == null) {
                     Text(
-                        text = "シャーシを選択",
+                        text = stringResource(R.string.calc_chassis_unselected),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "タップしてメーカー・シャーシを選ぶ",
+                        text = stringResource(R.string.calc_chassis_unselected_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -64,7 +66,7 @@ fun ChassisSelectorCard(
                         )
                         if (selected.chassis.isUserEdited) {
                             Text(
-                                text = "編集済",
+                                text = stringResource(R.string.badge_user_edited),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.padding(start = 8.dp)
@@ -72,7 +74,10 @@ fun ChassisSelectorCard(
                         }
                     }
                     Text(
-                        text = "内部減速比 " + selected.chassis.internalRatio.formatRatio(),
+                        text = stringResource(
+                            R.string.calc_chassis_internal_ratio,
+                            selected.chassis.internalRatio.formatRatio()
+                        ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -80,7 +85,7 @@ fun ChassisSelectorCard(
             }
             Icon(
                 imageVector = Icons.Filled.KeyboardArrowDown,
-                contentDescription = "シャーシを選択",
+                contentDescription = stringResource(R.string.calc_chassis_unselected),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

@@ -1,39 +1,30 @@
 package io.github.taskengineer.rcgear.feature.setups
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Input
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Input
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import io.github.taskengineer.rcgear.core.designsystem.theme.RcGearTheme
+import io.github.taskengineer.rcgear.R
+import io.github.taskengineer.rcgear.core.designsystem.component.LabeledRow
+import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
+import io.github.taskengineer.rcgear.core.designsystem.component.ValueDiffHeader
+import io.github.taskengineer.rcgear.core.designsystem.component.ValueDiffRow
+import io.github.taskengineer.rcgear.core.ui.RcDetailScaffold
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.core.ui.formatRpm
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
@@ -46,103 +37,74 @@ import io.github.taskengineer.rcgear.domain.model.SavedSetup
  * - 保存値の一覧表示
  * - スナップショット差分表示（PLAN 9.5）: 内部減速比が保存時と現在で異なる場合、
  *   「保存時 2.60 / 現在 2.70」の形式で両方の計算結果を並べる
- * - 「CALC に流し込む」ボタン → CALC タブへ遷移（PLAN 5.3）
+ * - 「CALC に流し込む」ボタン → CALC 画面へ遷移（PLAN 5.3 / U-3）。
+ *   値の受け渡しはルート引数なので、この画面は setupId を渡すだけ
  * - 削除（確認ダイアログ付き）
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupDetailScreen(
     onNavigateBack: () -> Unit,
-    onLoadToCalc: () -> Unit,
+    onLoadToCalc: (Long) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SetupDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val setup = state.setup
 
-    // 削除完了 or 対象が見つからない場合は一覧へ戻る
-    LaunchedEffect(state.isDeleted, state.notFound) {
-        if (state.isDeleted || state.notFound) onNavigateBack()
-    }
-
-    Scaffold(
+    RcDetailScaffold(
+        title = setup?.name ?: stringResource(R.string.setup_detail_title),
+        onNavigateBack = onNavigateBack,
+        events = viewModel.events,
+        isLoading = state.isLoading || setup == null,
         modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(state.setup?.name ?: "セッティング詳細") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "戻る"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = viewModel::onDeleteClick) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "削除",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        val setup = state.setup
-        if (state.isLoading || setup == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+        actions = {
+            IconButton(onClick = viewModel::onDeleteClick) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.action_delete),
+                    tint = MaterialTheme.colorScheme.error
+                )
             }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        }
+    ) {
+        if (setup != null) {
+            // ---- 基本情報 ----
+            InfoCard(state = state, setup = setup)
+
+            // ---- スナップショット差分（差がある場合のみ） ----
+            state.currentResult?.let { current ->
+                SnapshotDiffCard(
+                    snapshotRatio = setup.internalRatioSnapshot,
+                    currentRatio = state.chassis?.internalRatio ?: 0.0,
+                    snapshotResult = state.snapshotResult,
+                    currentResult = current
+                )
+            }
+
+            // ---- 計算結果（保存時の値） ----
+            state.snapshotResult?.let { result ->
+                ResultCard(
+                    title = stringResource(
+                        if (state.currentResult != null) {
+                            R.string.setup_detail_result_title_snapshot
+                        } else {
+                            R.string.setup_detail_result_title
+                        }
+                    ),
+                    result = result
+                )
+            }
+
+            // ---- CALC へ流し込む ----
+            Button(
+                onClick = { onLoadToCalc(setup.id) },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // ---- 基本情報 ----
-                InfoCard(state = state, setup = setup)
-
-                // ---- スナップショット差分（差がある場合のみ） ----
-                state.currentResult?.let { current ->
-                    SnapshotDiffCard(
-                        snapshotRatio = setup.internalRatioSnapshot,
-                        currentRatio = state.chassis?.internalRatio ?: 0.0,
-                        snapshotResult = state.snapshotResult,
-                        currentResult = current
-                    )
-                }
-
-                // ---- 計算結果（保存時の値） ----
-                state.snapshotResult?.let { result ->
-                    ResultCard(
-                        title = if (state.currentResult != null) "計算結果（保存時の内部減速比）" else "計算結果",
-                        result = result
-                    )
-                }
-
-                // ---- CALC へ流し込む ----
-                Button(
-                    onClick = {
-                        viewModel.onLoadToCalc()
-                        onLoadToCalc()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Input, contentDescription = null)
-                    Text(
-                        text = "CALC に流し込む",
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
+                Icon(Icons.AutoMirrored.Filled.Input, contentDescription = null)
+                Text(
+                    text = stringResource(R.string.setup_detail_load_to_calc),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             }
         }
     }
@@ -150,16 +112,26 @@ fun SetupDetailScreen(
     if (state.showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = viewModel::onDeleteConfirmDismiss,
-            title = { Text("削除の確認") },
-            text = { Text("「${state.setup?.name}」を削除しますか？この操作は取り消せません。") },
+            title = { Text(stringResource(R.string.setup_detail_delete_confirm_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.setup_detail_delete_confirm_text,
+                        setup?.name.orEmpty()
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(onClick = viewModel::onDeleteConfirm) {
-                    Text("削除", color = MaterialTheme.colorScheme.error)
+                    Text(
+                        text = stringResource(R.string.action_delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::onDeleteConfirmDismiss) {
-                    Text("キャンセル")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -168,31 +140,44 @@ fun SetupDetailScreen(
 
 @Composable
 private fun InfoCard(state: SetupDetailUiState, setup: SavedSetup) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            DetailRow(
-                label = "シャーシ",
-                value = state.chassis?.name ?: setup.chassisId
-            )
-            DetailRow(label = "ピニオン", value = "${setup.pinion}T")
-            DetailRow(label = "スパー", value = "${setup.spur}T")
-            DetailRow(label = "モーターKV", value = "${setup.kv}")
-            DetailRow(label = "セル数", value = "${setup.cells}S")
-            DetailRow(label = "タイヤ径", value = "${setup.tireMm}mm")
-            DetailRow(
-                label = "内部減速比（保存時）",
-                value = setup.internalRatioSnapshot.formatRatio()
-            )
-        }
+    RcCard {
+        LabeledRow(
+            label = stringResource(R.string.setup_detail_chassis),
+            value = state.chassis?.name ?: setup.chassisId
+        )
+        LabeledRow(
+            label = stringResource(R.string.field_pinion),
+            value = stringResource(R.string.value_teeth, setup.pinion)
+        )
+        LabeledRow(
+            label = stringResource(R.string.field_spur),
+            value = stringResource(R.string.value_teeth, setup.spur)
+        )
+        LabeledRow(
+            label = stringResource(R.string.field_motor_kv),
+            value = stringResource(R.string.value_number, setup.kv)
+        )
+        LabeledRow(
+            label = stringResource(R.string.field_cells),
+            value = stringResource(R.string.value_cells, setup.cells)
+        )
+        LabeledRow(
+            label = stringResource(R.string.field_tire_mm),
+            value = stringResource(R.string.value_millimeter, setup.tireMm)
+        )
+        LabeledRow(
+            label = stringResource(R.string.setup_detail_internal_ratio_snapshot),
+            value = setup.internalRatioSnapshot.formatRatio()
+        )
     }
 }
 
 /**
  * スナップショット差分カード（PLAN 9.5）。
  * 内部減速比が保存時と現在で異なる場合のみ表示される。
+ *
+ * 差分の描画は [ValueDiffRow] に寄せた（U-1）。Phase 2 でシート全体の差分を
+ * 出すときも同じ行が使われるので、ここが最初の 1 例になる。
  */
 @Composable
 private fun SnapshotDiffCard(
@@ -201,87 +186,54 @@ private fun SnapshotDiffCard(
     snapshotResult: GearCalculationResult?,
     currentResult: GearCalculationResult
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = "⚠ 内部減速比がDBと異なります",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.tertiary
-            )
-            Text(
-                text = "保存時 ${snapshotRatio.formatRatio()} / 現在 ${currentRatio.formatRatio()}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            snapshotResult?.let {
-                DetailRow(
-                    label = "最高速（保存時比）",
-                    value = "${it.topSpeedKmh.formatSpeed()} km/h"
-                )
-            }
-            DetailRow(
-                label = "最高速（現在比）",
-                value = "${currentResult.topSpeedKmh.formatSpeed()} km/h"
-            )
-            Text(
-                text = "「CALC に流し込む」と現在のDB値で再計算されます",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    RcCard {
+        Text(
+            text = stringResource(R.string.setup_detail_diff_warning),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.tertiary
+        )
+        ValueDiffHeader(
+            leftLabel = stringResource(R.string.setup_detail_diff_saved),
+            rightLabel = stringResource(R.string.setup_detail_diff_current)
+        )
+        ValueDiffRow(
+            label = stringResource(R.string.field_internal_ratio),
+            left = snapshotRatio.formatRatio(),
+            right = currentRatio.formatRatio()
+        )
+        ValueDiffRow(
+            label = stringResource(R.string.metric_top_speed),
+            left = snapshotResult?.let {
+                stringResource(R.string.value_kmh, it.topSpeedKmh.formatSpeed())
+            },
+            right = stringResource(R.string.value_kmh, currentResult.topSpeedKmh.formatSpeed())
+        )
+        Text(
+            text = stringResource(R.string.setup_detail_diff_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
 @Composable
 private fun ResultCard(title: String, result: GearCalculationResult) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            DetailRow(
-                label = "最高速",
-                value = "${result.topSpeedKmh.formatSpeed()} km/h"
-            )
-            DetailRow(
-                label = "1次減速比",
-                value = result.primaryRatio.formatRatio()
-            )
-            DetailRow(
-                label = "最終減速比 FDR",
-                value = result.finalDriveRatio.formatRatio()
-            )
-            DetailRow(
-                label = "ホイールRPM",
-                value = result.wheelRpm.formatRpm()
-            )
-        }
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
+    RcCard(title = title) {
+        LabeledRow(
+            label = stringResource(R.string.metric_top_speed),
+            value = stringResource(R.string.value_kmh, result.topSpeedKmh.formatSpeed())
         )
-        Text(
-            text = value,
-            style = RcGearTheme.extendedTypography.hudUnit.copy(
-                fontSize = MaterialTheme.typography.bodyMedium.fontSize
-            ),
-            color = MaterialTheme.colorScheme.onSurface
+        LabeledRow(
+            label = stringResource(R.string.metric_primary_ratio),
+            value = result.primaryRatio.formatRatio()
+        )
+        LabeledRow(
+            label = stringResource(R.string.metric_fdr),
+            value = result.finalDriveRatio.formatRatio()
+        )
+        LabeledRow(
+            label = stringResource(R.string.metric_wheel_rpm),
+            value = result.wheelRpm.formatRpm()
         )
     }
 }

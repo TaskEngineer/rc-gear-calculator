@@ -1,5 +1,6 @@
 package io.github.taskengineer.rcgear.feature.calc
 
+import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.GearCalculationResult
@@ -15,7 +16,8 @@ import io.github.taskengineer.rcgear.domain.model.Maker
  * @property result           計算結果。シャーシ未選択の間は null
  * @property isChassisSheetOpen シャーシ選択ボトムシートの表示状態
  * @property saveDialog       保存ダイアログの状態。null = 非表示
- * @property savedMessage     保存成功時のスナックバー用メッセージ。表示後にクリアする
+ * @property savedMessage     保存成功時のスナックバー用メッセージ。表示後にクリアする。
+ *   文字列ではなく [UiText] なのは、ViewModel に日本語を持たせないため（S-11）
  */
 data class CalcUiState(
     val isLoading: Boolean = true,
@@ -32,7 +34,7 @@ data class CalcUiState(
     val result: GearCalculationResult? = null,
     val isChassisSheetOpen: Boolean = false,
     val saveDialog: SaveDialogState? = null,
-    val savedMessage: String? = null
+    val savedMessage: UiText? = null
 )
 
 /**
@@ -52,6 +54,6 @@ data class SelectedChassis(
  */
 data class SaveDialogState(
     val name: String = "",
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val isSaving: Boolean = false
 )

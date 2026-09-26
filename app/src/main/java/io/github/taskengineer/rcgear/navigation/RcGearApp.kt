@@ -13,6 +13,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -29,24 +32,23 @@ import androidx.navigation.compose.rememberNavController
 fun RcGearApp() {
     val navController = rememberNavController()
 
-    // 現在の目的地からアクティブなタブを求める。
-    // "setups/{setupId}" のような派生画面でも親タブ（SETUPS）を選択状態にするため、
-    // ルート文字列の前方一致で判定する。
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    val currentTab = TopLevelDestination.entries.firstOrNull { tab ->
-        currentRoute == tab.route || currentRoute?.startsWith("${tab.route}/") == true
-    }
+    val destination = backStackEntry?.destination
+    // 派生画面（SetupDetail / ChassisEdit）でも親タブを選択状態にするため、
+    // タブ自身のルートと childRoutes の両方を突き合わせる（S-12）
+    val currentTab = TopLevelDestination.entries.firstOrNull { tab -> destination.belongsTo(tab) }
     // トップレベル画面かどうか。派生画面（詳細・編集）は自前の TopAppBar
     // （戻るボタン付き）を持つため、シェル側の TopAppBar は出さない
-    val isTopLevel = TopLevelDestination.entries.any { it.route == currentRoute }
+    val isTopLevel = TopLevelDestination.entries.any { tab ->
+        destination?.hasRoute(tab.routeClass) == true
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
             if (isTopLevel) {
                 TopAppBar(
-                    title = { Text(currentTab?.title ?: "") }
+                    title = { Text(currentTab?.let { stringResource(it.titleRes) } ?: "") }
                 )
             }
         },
@@ -71,7 +73,7 @@ fun RcGearApp() {
                         icon = {
                             Icon(
                                 imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                                contentDescription = tab.title
+                                contentDescription = stringResource(tab.titleRes)
                             )
                         },
                         label = {
@@ -90,4 +92,11 @@ fun RcGearApp() {
             modifier = Modifier.padding(innerPadding)
         )
     }
+}
+
+/** この目的地が [tab] 配下（タブ自身 or その派生画面）かどうか */
+private fun NavDestination?.belongsTo(tab: TopLevelDestination): Boolean {
+    val destination = this ?: return false
+    if (destination.hasRoute(tab.routeClass)) return true
+    return tab.childRoutes.any { destination.hasRoute(it) }
 }

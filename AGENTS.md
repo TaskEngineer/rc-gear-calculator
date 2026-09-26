@@ -10,7 +10,7 @@
 - Kotlin 2.0 / Jetpack Compose / Material 3 / Hilt / Room / DataStore / Navigation Compose。
 - `:app`（Android）＋ `:core:domain`（純 Kotlin JVM）の 2 モジュール。
   `:app` 内は引き続きパッケージで疑似分割（`core` / `data` / `feature` / `navigation`）。
-- MVP（Step 1〜12）は実装済み。以降は `docs/ROADMAP.md` に沿って拡張する。
+- MVP（Step 1〜12）と土台工程（Phase 0 / Phase 1）は完了。以降は `docs/ROADMAP.md` に沿って拡張する。
 - コード内コメント・UI 文言・ドキュメントは **日本語** で統一している。新規コードも日本語コメントで書く。
 
 ## 2. ビルド・テスト（必ずこの手順で）
@@ -19,7 +19,7 @@
 # Windows / PowerShell。JAVA は PATH に無いので JAVA_HOME を明示する
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 .\gradlew.bat :app:assembleDebug --console=plain      # デバッグビルド
-.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 87 件）
+.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 95 件）
 .\gradlew.bat :core:domain:test --console=plain       # ドメインのみ（Android を経由しないので速い）
 .\gradlew.bat :app:lintDebug --console=plain          # Android Lint
 ```
@@ -49,7 +49,9 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
    ただし例外は **v1 → v2 の 1 回だけ**（`fallbackToDestructiveMigrationFrom(1)`）。
    v2 以降は Migration を書く。`fallbackToDestructiveMigration()`（無引数）に戻さないこと。
    公開に踏み切る場合はこの例外を撤回すること
-5. UI 文言を追加したら、可能な限り `res/values/strings.xml` に置く（現状ハードコードが多いが、増やさない）
+5. **UI 文言は必ず `res/values/strings.xml` に置く**（S-11 で移行済み）。
+   Composable は `stringResource()`、ViewModel は `core/ui/UiText`（リソース ID + 引数）を UiState に載せる。
+   例外は `@Preview` のサンプルデータと、designsystem 部品内で解決する固定の a11y ラベルだけ
 
 ## 3. アーキテクチャの要点（as-built）
 
@@ -104,7 +106,10 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
   両者でルールが違う。
 - Compose: 画面は `XxxScreen(viewModel = hiltViewModel())` の薄いラッパー ＋ 状態を受け取る `XxxContent`。
   プレビュー可能な stateless Composable を優先する。
-- ViewModel は `@HiltViewModel`。画面遷移引数は `SavedStateHandle` から取る（`checkNotNull`）。
+  共有部品は `core/designsystem/component/` にあるものを使い、画面に `private` で作り直さない。
+- ViewModel は `@HiltViewModel`。画面遷移引数は `navigation/Routes.kt` の復元関数（`savedStateHandle.calcRoute()` 等）から取る。
+  `toRoute<T>()` は Bundle を要求し JVM 単体テストで落ちるので使わない（`docs/HANDOFF.md` §5.6）。
+  画面を閉じる・戻るは UiState の Boolean ではなく `core/ui/ScreenEvent` で流す。
 - 数値の表示整形は `core/ui/Format.kt` の拡張関数（`formatRatio()` 等）を使う。
   新しく `String.format` を書くときは必ず `Locale.US` を指定する（小数点が `,` になる地域がある）。
 - 例外を握りつぶさない。ユーザーに見せるエラーは UiState の `message` / `errorMessage` に載せて Snackbar / ダイアログで出す。
@@ -116,10 +121,11 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 
 | やりたいこと | 触る場所 |
 |---|---|
-| 計算式・新メトリック追加 | `:core:domain` の `domain/calculator/GearCalculator.kt` → `domain/model/GearCalculationResult.kt` → `GearCalculatorTest` → `feature/calc/component/MetricsGrid.kt` |
+| 計算式・新メトリック追加 | `:core:domain` の `domain/calculator/GearCalculator.kt` → `domain/model/GearCalculationResult.kt` → `GearCalculatorTest` → `feature/calc/component/GearMetrics.kt`（表示するメトリックの一覧） |
+| UI 部品を足す / 直す | `core/designsystem/component/`（ドメイン非依存。**必ず `@Preview` を付ける**）。ドメインを知る部品は `core/ui/` |
 | シャーシを追加 | `app/src/main/assets/chassis-db.json`（`id` は `メーカー_型番` のスネークケース、重複不可） |
 | 設定項目を追加 | `domain/model/UserPreferences.kt` → `data/local/datastore/UserPreferencesDataSource.kt`（Keys）→ `PreferencesRepository` → `feature/config` |
-| 新しい画面 | `navigation/Routes.kt` → `RcGearNavHost.kt` → `feature/<name>/` |
+| 新しい画面 | `navigation/Routes.kt`（`@Serializable` ルート + 復元関数）→ `RcGearNavHost.kt` → `feature/<name>/`。詳細画面は `core/ui/RcDetailScaffold` に載せる |
 | 保存データの項目追加 | `SavedSetupEntity`（Room version++ と Migration）→ `SavedSetup` → `SetupRepository` の変換 → `ExportedSetupDto`（schemaVersion 検討） |
 
 ## 7. 作業前に読むもの・やること

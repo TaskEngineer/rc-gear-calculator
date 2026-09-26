@@ -45,22 +45,29 @@
 
 ---
 
-## Phase 1 — 共有 UI / 文言 / ナビの土台
+## Phase 1 — 共有 UI / 文言 / ナビの土台【完了: 2026-09-26】
 
 40 項目のフォームを書く前に必要な前提条件。ここを飛ばすと同じ部品を 10 回書くことになる。
 
-| ID | 内容 | 規模 | 依存 |
-|---|---|---|---|
-| U-1 | `core/designsystem/component/` 新設。`RcCard` / `SectionHeader` / `LabeledRow` / `RcSlider`（`GearSlider` を移設）/ `RcStepper` / `RcNumberField` / `RcSelectField` / `MetricsGrid` / `ValueDiffRow`。**全部に `@Preview`** | 大 | なし |
-| U-2 | `RcDetailScaffold` + `ScreenEvent` で、3 画面にコピペされている `Scaffold+TopAppBar+戻る` と `isDone/notFound+LaunchedEffect` を 1 本化 | 中 | U-1 |
-| S-11 | REF-4: 文言リソース化。Composable は `stringResource()`、ViewModel は `sealed interface UiMessage` | 中 | なし |
-| S-12 | REF-5: 型安全ルート（`@Serializable` data class） | 中 | なし |
-| U-3 | DEBT-6: `CalcRequestBus` 廃止 → nav 引数 + `SavedStateHandle` | 小 | S-12 |
-| U-4 | DEBT-10: `_uiState.update{}` 内の例外・副作用を除去、`first { !it.isLoading }` の永久サスペンド解消 | 小 | なし |
-
-現状の UI 層の問題: **共有コンポーネント層が存在しない**。`DetailRow` / `ConfigRow` /
+着手前の UI 層の問題は「**共有コンポーネント層が存在しない**」こと。`DetailRow` / `ConfigRow` /
 `SwitchRow` / `SectionHeader` / `MetricCell` / `SetupCard` が全て `private`、
-再利用可能な入力部品は `GearSlider` ただ 1 つ、`@Preview` はゼロ。
+再利用可能な入力部品は `GearSlider` ただ 1 つ、`@Preview` はゼロだった。
+
+実施順は依存関係に従って S-12 → U-3 → U-4 → U-1 → U-2 → S-11 にした
+（文言リソース化を最後にすることで、移設後のコードを 1 回で掃ける）。
+
+| ID | 内容 | 状態 |
+|---|---|---|
+| S-12 | REF-5: 型安全ルート（`@Serializable`）。親タブ判定を `hasRoute()` に | 完了 `acbd038` |
+| U-3 | DEBT-6: `CalcRequestBus` 廃止 → ルート引数 `Calc(setupId)` + `SavedStateHandle` | 完了 `8bd116d` |
+| U-4 | DEBT-10: `update {}` 内の再計算・副作用を `setState()` に追い出す | 完了 `28c437b` |
+| U-1 | `core/designsystem/component/` 新設（13 部品、全てに `@Preview`） | 完了 `d8687a9` |
+| U-2 | `RcDetailScaffold` + `ScreenEvent` / `ObserveEvents` | 完了 `95a619e` |
+| S-11 | REF-4: 文言リソース化（`stringResource()` / `UiText` / `@StringRes`） | 完了 `c8fa274` |
+
+到達点: 単体テスト 87 → **95 件**、`@Preview` 0 → 13、
+`strings.xml` 1 件 → 約 110 件、ハードコードされた日本語は `@Preview` のサンプルのみ。
+設計判断は `HANDOFF.md` §5.6 に記録した。
 
 ---
 

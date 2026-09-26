@@ -19,8 +19,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.github.taskengineer.rcgear.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -51,12 +53,12 @@ fun SetupsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "保存されたセッティングはありません",
+                        text = stringResource(R.string.setups_empty_title),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "CALC 画面の保存ボタンから追加できます",
+                        text = stringResource(R.string.setups_empty_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -108,8 +110,14 @@ private fun SetupCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "P${item.setup.pinion}T / S${item.setup.spur}T  " +
-                        "${item.setup.kv}KV  ${item.setup.cells}S  ${item.setup.tireMm}mm",
+                    text = stringResource(
+                        R.string.setups_card_summary,
+                        item.setup.pinion,
+                        item.setup.spur,
+                        item.setup.kv,
+                        item.setup.cells,
+                        item.setup.tireMm
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
