@@ -17,7 +17,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import io.github.taskengineer.rcgear.R
 
 /**
  * 選択肢から 1 つ選ぶフィールド（U-1）。
@@ -37,7 +39,7 @@ fun RcSelectField(
     options: List<Option>,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "未設定"
+    placeholder: String = stringResource(R.string.value_unset)
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = options.firstOrNull { it.key == selectedKey }?.label

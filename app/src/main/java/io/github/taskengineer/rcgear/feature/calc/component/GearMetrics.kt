@@ -1,6 +1,8 @@
 package io.github.taskengineer.rcgear.feature.calc.component
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.component.Metric
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.core.ui.formatRpm
@@ -18,9 +20,25 @@ import io.github.taskengineer.rcgear.domain.model.GearCalculationResult
  */
 @Composable
 fun gearMetrics(result: GearCalculationResult?): List<Metric> = listOf(
-    Metric(label = "1次減速比", value = result?.primaryRatio?.formatRatio()),
-    Metric(label = "最終減速比 FDR", value = result?.finalDriveRatio?.formatRatio()),
-    Metric(label = "電圧", value = result?.voltage?.formatVoltage(), unit = "V"),
-    Metric(label = "モーターRPM", value = result?.motorRpm?.formatRpm()),
-    Metric(label = "ホイールRPM", value = result?.wheelRpm?.formatRpm())
+    Metric(
+        label = stringResource(R.string.metric_primary_ratio),
+        value = result?.primaryRatio?.formatRatio()
+    ),
+    Metric(
+        label = stringResource(R.string.metric_fdr),
+        value = result?.finalDriveRatio?.formatRatio()
+    ),
+    Metric(
+        label = stringResource(R.string.metric_voltage),
+        value = result?.voltage?.formatVoltage(),
+        unit = stringResource(R.string.unit_volt)
+    ),
+    Metric(
+        label = stringResource(R.string.metric_motor_rpm),
+        value = result?.motorRpm?.formatRpm()
+    ),
+    Metric(
+        label = stringResource(R.string.metric_wheel_rpm),
+        value = result?.wheelRpm?.formatRpm()
+    )
 )

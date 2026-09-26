@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.R
+import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
 import io.github.taskengineer.rcgear.data.local.file.JsonFileDataSource
 import io.github.taskengineer.rcgear.domain.model.ThemeMode
@@ -91,7 +93,9 @@ class ConfigViewModel @Inject constructor(
     fun onBalanceFdrConfirm() {
         val value = _uiState.value.balanceFdrInput.trim().toDoubleOrNull()
         if (value == null || value <= 0.0) {
-            _uiState.update { it.copy(balanceFdrError = "正の数値で入力してください") }
+            _uiState.update {
+                it.copy(balanceFdrError = UiText.Res(R.string.config_balance_fdr_error))
+            }
             return
         }
         viewModelScope.launch {
@@ -106,9 +110,16 @@ class ConfigViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 jsonFileDataSource.writeText(uri, exportDataUseCase())
-                _uiState.update { it.copy(message = "データを書き出しました") }
+                _uiState.update { it.copy(message = UiText.Res(R.string.config_export_done)) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(message = "書き出しに失敗しました: ${e.message}") }
+                _uiState.update {
+                    it.copy(
+                        message = UiText.Res(
+                            R.string.config_export_failed,
+                            listOf(e.message.orEmpty())
+                        )
+                    )
+                }
             }
         }
     }
@@ -118,35 +129,26 @@ class ConfigViewModel @Inject constructor(
             try {
                 when (val result = importDataUseCase(jsonFileDataSource.readText(uri))) {
                     is ImportDataUseCase.Result.Success -> _uiState.update {
-                        it.copy(
-                            message = buildString {
-                                append("取り込み完了: ")
-                                append("セッティング ${result.importedSetups}件")
-                                val setupNotes = buildList {
-                                    if (result.skippedSetups > 0) add("同名スキップ ${result.skippedSetups}件")
-                                    if (result.invalidSetups > 0) add("値が不正 ${result.invalidSetups}件")
-                                }
-                                if (setupNotes.isNotEmpty()) append(setupNotes.joinToString("・", "（", "）"))
-                                append(" / 上書き ${result.importedOverrides}件")
-                                val overrideNotes = buildList {
-                                    if (result.skippedOverrides > 0) add("不明シャーシ ${result.skippedOverrides}件")
-                                    if (result.invalidOverrides > 0) add("値が不正 ${result.invalidOverrides}件")
-                                }
-                                if (overrideNotes.isNotEmpty()) append(overrideNotes.joinToString("・", "（", "）"))
-                            }
-                        )
+                        it.copy(message = importedMessage(result))
                     }
 
                     ImportDataUseCase.Result.InvalidFormat -> _uiState.update {
-                        it.copy(message = "読み込めないファイル形式です")
+                        it.copy(message = UiText.Res(R.string.config_import_failed_format))
                     }
 
                     ImportDataUseCase.Result.UnsupportedVersion -> _uiState.update {
-                        it.copy(message = "このアプリより新しいバージョンのデータです")
+                        it.copy(message = UiText.Res(R.string.config_import_failed_version))
                     }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(message = "読み込みに失敗しました: ${e.message}") }
+                _uiState.update {
+                    it.copy(
+                        message = UiText.Res(
+                            R.string.config_import_failed,
+                            listOf(e.message.orEmpty())
+                        )
+                    )
+                }
             }
         }
     }
@@ -163,13 +165,64 @@ class ConfigViewModel @Inject constructor(
             historyRepository.deleteAll()
             preferencesRepository.clear()
             _uiState.update {
-                it.copy(showDeleteAllConfirm = false, message = "全データを削除しました")
+                it.copy(
+                    showDeleteAllConfirm = false,
+                    message = UiText.Res(R.string.config_delete_all_done)
+                )
             }
         }
     }
 
     /** スナックバー表示後に呼ぶ */
     fun onMessageShown() = _uiState.update { it.copy(message = null) }
+
+    /**
+     * インポート結果のメッセージを組み立てる（S-11）。
+     *
+     * 「取り込み完了: セッティング 3件（同名スキップ 1件）/ 上書き 2件」のように
+     * 入れ子になるので、[UiText] を書式引数に入れて画面側で解決させる。
+     * 件数が 0 の注記は出さない。
+     */
+    private fun importedMessage(result: ImportDataUseCase.Result.Success): UiText =
+        UiText.Res(
+            R.string.config_import_done,
+            listOf(
+                result.importedSetups,
+                notes(
+                    duplicateName = result.skippedSetups,
+                    invalid = result.invalidSetups
+                ),
+                result.importedOverrides,
+                notes(
+                    unknownChassis = result.skippedOverrides,
+                    invalid = result.invalidOverrides
+                )
+            )
+        )
+
+    /** 括弧付きの注記。出すものが無ければ空文字（書式引数に埋めても何も見えない） */
+    private fun notes(
+        duplicateName: Int = 0,
+        unknownChassis: Int = 0,
+        invalid: Int = 0
+    ): UiText {
+        val parts = buildList {
+            if (duplicateName > 0) {
+                add(UiText.Res(R.string.config_import_note_duplicate_name, listOf(duplicateName)))
+            }
+            if (unknownChassis > 0) {
+                add(UiText.Res(R.string.config_import_note_unknown_chassis, listOf(unknownChassis)))
+            }
+            if (invalid > 0) {
+                add(UiText.Res(R.string.config_import_note_invalid, listOf(invalid)))
+            }
+        }
+        if (parts.isEmpty()) return UiText.Empty
+        return UiText.Res(
+            R.string.config_import_note_wrap,
+            listOf(UiText.Joined(parts, R.string.list_separator))
+        )
+    }
 }
 
 data class ConfigUiState(
@@ -178,7 +231,7 @@ data class ConfigUiState(
     val showThemeDialog: Boolean = false,
     val showBalanceFdrDialog: Boolean = false,
     val balanceFdrInput: String = "",
-    val balanceFdrError: String? = null,
+    val balanceFdrError: UiText? = null,
     val showDeleteAllConfirm: Boolean = false,
-    val message: String? = null
+    val message: UiText? = null
 )

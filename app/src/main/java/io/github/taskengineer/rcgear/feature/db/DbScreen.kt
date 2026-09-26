@@ -21,8 +21,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.domain.model.Chassis
 
@@ -49,12 +51,14 @@ fun DbScreen(
                     selected = state.filter == filter,
                     onClick = { viewModel.onFilterChange(filter) },
                     text = {
-                        val label = if (filter == DbFilter.EDITED && state.editedCount > 0) {
-                            "${filter.label} (${state.editedCount})"
-                        } else {
-                            filter.label
-                        }
-                        Text(label)
+                        val label = stringResource(filter.labelRes)
+                        Text(
+                            if (filter == DbFilter.EDITED && state.editedCount > 0) {
+                                stringResource(R.string.db_filter_edited_count, label, state.editedCount)
+                            } else {
+                                label
+                            }
+                        )
                     }
                 )
             }
@@ -68,11 +72,13 @@ fun DbScreen(
 
                 state.makers.isEmpty() -> {
                     Text(
-                        text = if (state.filter == DbFilter.EDITED) {
-                            "編集済みのエントリはありません"
-                        } else {
-                            "シャーシDBが空です"
-                        },
+                        text = stringResource(
+                            if (state.filter == DbFilter.EDITED) {
+                                R.string.db_empty_edited
+                            } else {
+                                R.string.db_empty
+                            }
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.Center)
@@ -88,7 +94,11 @@ fun DbScreen(
                         state.makers.forEach { maker ->
                             item(key = "maker_${maker.name}") {
                                 Text(
-                                    text = "${maker.name}  (${maker.chassis.size})",
+                                    text = stringResource(
+                                        R.string.db_maker_header,
+                                        maker.name,
+                                        maker.chassis.size
+                                    ),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -132,7 +142,7 @@ private fun ChassisCard(
                     )
                     if (chassis.isUserEdited) {
                         Text(
-                            text = "編集済",
+                            text = stringResource(R.string.badge_user_edited),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.padding(start = 8.dp)
@@ -158,7 +168,7 @@ private fun ChassisCard(
                     }
                 )
                 Text(
-                    text = "${chassis.defaultTireMm}mm",
+                    text = stringResource(R.string.value_millimeter, chassis.defaultTireMm),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

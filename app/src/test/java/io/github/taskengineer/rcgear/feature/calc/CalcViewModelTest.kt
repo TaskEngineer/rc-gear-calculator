@@ -1,6 +1,8 @@
 package io.github.taskengineer.rcgear.feature.calc
 
 import androidx.lifecycle.SavedStateHandle
+import io.github.taskengineer.rcgear.R
+import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.SavedSetup
@@ -347,7 +349,12 @@ class CalcViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.uiState.value.saveDialog)
-        assertNotNull(vm.uiState.value.savedMessage)
+        // メッセージは文字列ではなくリソース ID + 引数で持つ（S-11）。
+        // 文言を直したときにテストが落ちない
+        assertEquals(
+            UiText.Res(R.string.calc_saved, listOf("Rd1")),
+            vm.uiState.value.savedMessage
+        )
         assertEquals("Rd1", setupRepository.stored.single().name)
     }
 
@@ -367,7 +374,10 @@ class CalcViewModelTest {
 
         val dialog = vm.uiState.value.saveDialog
         assertNotNull("エラー時はダイアログを閉じてはいけない", dialog)
-        assertNotNull(dialog?.errorMessage)
+        assertEquals(
+            UiText.Res(R.string.calc_save_error_duplicate_name),
+            dialog?.errorMessage
+        )
         assertTrue("多重タップ防止の isSaving が戻っていない", dialog?.isSaving == false)
         assertEquals(1, setupRepository.stored.size)
     }

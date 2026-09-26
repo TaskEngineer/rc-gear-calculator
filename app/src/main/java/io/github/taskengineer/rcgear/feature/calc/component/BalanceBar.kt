@@ -17,7 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.taskengineer.rcgear.R
 
 /**
  * セッティング傾向バー（PLAN 2.1.1 / アニメーションは Step 12）。
@@ -51,7 +53,7 @@ fun BalanceBar(
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "セッティング傾向",
+                    text = stringResource(R.string.calc_balance_title),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
@@ -96,13 +98,13 @@ fun BalanceBar(
 
             Row(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "◀ 最高速",
+                    text = stringResource(R.string.calc_balance_speed_side),
                     style = MaterialTheme.typography.labelSmall,
                     color = speedColor,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = "トルク ▶",
+                    text = stringResource(R.string.calc_balance_torque_side),
                     style = MaterialTheme.typography.labelSmall,
                     color = torqueColor
                 )

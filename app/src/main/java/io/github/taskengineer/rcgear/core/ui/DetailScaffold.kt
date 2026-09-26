@@ -39,7 +39,6 @@ fun RcDetailScaffold(
     events: Flow<ScreenEvent>,
     isLoading: Boolean,
     modifier: Modifier = Modifier,
-    backContentDescription: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -51,7 +50,6 @@ fun RcDetailScaffold(
             RcTopAppBar(
                 title = title,
                 onNavigateBack = onNavigateBack,
-                backContentDescription = backContentDescription,
                 actions = actions
             )
         }

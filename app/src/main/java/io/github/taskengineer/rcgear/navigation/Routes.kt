@@ -1,5 +1,6 @@
 package io.github.taskengineer.rcgear.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Settings
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.SavedStateHandle
+import io.github.taskengineer.rcgear.R
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 
@@ -79,8 +81,9 @@ fun SavedStateHandle.chassisEditRoute(): ChassisEdit =
  * ボトムナビゲーションのトップレベル4タブ（PLAN 5.1）。
  *
  * @property route        タブのルート（引数なしの既定インスタンス）
- * @property label        ボトムナビ用ラベル。英大文字 + 等幅フォントで表示する
- * @property title        TopAppBar 用の画面タイトル（日本語）
+ * @property label        ボトムナビ用ラベル。英大文字 + 等幅フォントで表示する。
+ *   翻訳対象外の固有表記なのでリソースに置かない
+ * @property titleRes     TopAppBar 用の画面タイトル（S-11 で @StringRes 化）
  * @property childRoutes  このタブに属する派生画面。親タブを選択状態にするために使う
  * @property selectedIcon 選択中に表示する Filled アイコン
  * @property unselectedIcon 非選択時に表示する Outlined アイコン
@@ -88,7 +91,7 @@ fun SavedStateHandle.chassisEditRoute(): ChassisEdit =
 enum class TopLevelDestination(
     val route: Any,
     val label: String,
-    val title: String,
+    @StringRes val titleRes: Int,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
     val childRoutes: List<KClass<*>> = emptyList()
@@ -96,14 +99,14 @@ enum class TopLevelDestination(
     CALC(
         route = Calc(),
         label = "CALC",
-        title = "計算",
+        titleRes = R.string.tab_title_calc,
         selectedIcon = Icons.Filled.Speed,
         unselectedIcon = Icons.Outlined.Speed
     ),
     SETUPS(
         route = Setups,
         label = "SETUPS",
-        title = "保存一覧",
+        titleRes = R.string.tab_title_setups,
         selectedIcon = Icons.Filled.Bookmarks,
         unselectedIcon = Icons.Outlined.Bookmarks,
         childRoutes = listOf(SetupDetail::class)
@@ -111,7 +114,7 @@ enum class TopLevelDestination(
     DB(
         route = Db,
         label = "DB",
-        title = "シャーシDB",
+        titleRes = R.string.tab_title_db,
         selectedIcon = Icons.Filled.Storage,
         unselectedIcon = Icons.Outlined.Storage,
         childRoutes = listOf(ChassisEdit::class)
@@ -119,7 +122,7 @@ enum class TopLevelDestination(
     CONFIG(
         route = Config,
         label = "CONFIG",
-        title = "設定",
+        titleRes = R.string.tab_title_config,
         selectedIcon = Icons.Filled.Settings,
         unselectedIcon = Icons.Outlined.Settings
     );

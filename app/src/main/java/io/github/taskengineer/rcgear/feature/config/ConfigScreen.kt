@@ -25,13 +25,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.taskengineer.rcgear.BuildConfig
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.component.ChoiceRow
 import io.github.taskengineer.rcgear.core.designsystem.component.RcNumberField
 import io.github.taskengineer.rcgear.core.designsystem.component.SectionHeader
 import io.github.taskengineer.rcgear.core.designsystem.component.SwitchRow
+import io.github.taskengineer.rcgear.core.ui.UiText
+import io.github.taskengineer.rcgear.core.ui.asString
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
 import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import java.text.SimpleDateFormat
@@ -50,9 +54,11 @@ fun ConfigScreen(
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.message) {
-        state.message?.let { message ->
-            snackbarHostState.showSnackbar(message)
+    // 文字列化は合成中に済ませる（showSnackbar は Composable の外で走るため）
+    val message = state.message?.asString()
+    LaunchedEffect(message) {
+        message?.let {
+            snackbarHostState.showSnackbar(it)
             viewModel.onMessageShown()
         }
     }
@@ -73,55 +79,55 @@ fun ConfigScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // ---- DISPLAY ----
-            SectionHeader("DISPLAY")
+            SectionHeader(stringResource(R.string.config_section_display))
             ChoiceRow(
-                title = "テーマ",
-                value = state.preferences.themeMode.label(),
+                title = stringResource(R.string.config_theme),
+                value = stringResource(state.preferences.themeMode.labelRes),
                 onClick = viewModel::onThemeDialogOpen
             )
             SwitchRow(
-                title = "mph を併記",
+                title = stringResource(R.string.config_show_mph),
                 checked = state.preferences.showMphAlongside,
                 onCheckedChange = viewModel::onShowMphChange
             )
             SwitchRow(
-                title = "アニメーション",
+                title = stringResource(R.string.config_animation),
                 checked = state.preferences.animationEnabled,
                 onCheckedChange = viewModel::onAnimationEnabledChange
             )
 
             // ---- CALC TUNING ----
-            SectionHeader("CALC TUNING")
+            SectionHeader(stringResource(R.string.config_section_calc_tuning))
             ChoiceRow(
-                title = "基準 FDR",
-                subtitle = "セッティング傾向バーの中央となる最終減速比",
+                title = stringResource(R.string.config_balance_fdr),
+                subtitle = stringResource(R.string.config_balance_fdr_subtitle),
                 value = state.preferences.balanceFdr.formatSpeed(),
                 onClick = viewModel::onBalanceFdrDialogOpen
             )
 
             // ---- DATA ----
-            SectionHeader("DATA")
+            SectionHeader(stringResource(R.string.config_section_data))
             ChoiceRow(
-                title = "データを書き出す",
-                subtitle = "保存セッティングとシャーシ上書きを JSON で保存",
+                title = stringResource(R.string.config_export),
+                subtitle = stringResource(R.string.config_export_subtitle),
                 onClick = { exportLauncher.launch(defaultExportFileName()) }
             )
             ChoiceRow(
-                title = "データを読み込む",
-                subtitle = "書き出した JSON から取り込み（既存データは保持）",
+                title = stringResource(R.string.config_import),
+                subtitle = stringResource(R.string.config_import_subtitle),
                 onClick = { importLauncher.launch(arrayOf("application/json")) }
             )
             ChoiceRow(
-                title = "全データを削除",
-                subtitle = "保存セッティング・上書き・履歴・設定をすべて消去",
+                title = stringResource(R.string.config_delete_all),
+                subtitle = stringResource(R.string.config_delete_all_subtitle),
                 titleColor = MaterialTheme.colorScheme.error,
                 onClick = viewModel::onDeleteAllClick
             )
 
             // ---- ABOUT ----
-            SectionHeader("ABOUT")
+            SectionHeader(stringResource(R.string.config_section_about))
             ChoiceRow(
-                title = "バージョン",
+                title = stringResource(R.string.config_version),
                 value = BuildConfig.VERSION_NAME,
                 onClick = null
             )
@@ -156,18 +162,19 @@ fun ConfigScreen(
     if (state.showDeleteAllConfirm) {
         AlertDialog(
             onDismissRequest = viewModel::onDeleteAllDismiss,
-            title = { Text("全データ削除の確認") },
-            text = {
-                Text("保存セッティング・シャーシ上書き・計算履歴・設定をすべて削除します。この操作は取り消せません。")
-            },
+            title = { Text(stringResource(R.string.config_delete_all_confirm_title)) },
+            text = { Text(stringResource(R.string.config_delete_all_confirm_text)) },
             confirmButton = {
                 TextButton(onClick = viewModel::onDeleteAllConfirm) {
-                    Text("削除する", color = MaterialTheme.colorScheme.error)
+                    Text(
+                        text = stringResource(R.string.config_delete_all_confirm_button),
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::onDeleteAllDismiss) {
-                    Text("キャンセル")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -186,7 +193,7 @@ private fun ThemeSelectDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("テーマ") },
+        title = { Text(stringResource(R.string.config_theme)) },
         text = {
             Column {
                 ThemeMode.entries.forEach { mode ->
@@ -205,7 +212,7 @@ private fun ThemeSelectDialog(
                             onClick = { onSelect(mode) }
                         )
                         Text(
-                            text = mode.label(),
+                            text = stringResource(mode.labelRes),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(start = 8.dp)
                         )
@@ -215,7 +222,7 @@ private fun ThemeSelectDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("キャンセル") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 }
@@ -223,29 +230,31 @@ private fun ThemeSelectDialog(
 @Composable
 private fun BalanceFdrDialog(
     input: String,
-    error: String?,
+    error: UiText?,
     onInputChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("基準 FDR") },
+        title = { Text(stringResource(R.string.config_balance_fdr)) },
         text = {
             RcNumberField(
-                label = "基準 FDR",
+                label = stringResource(R.string.config_balance_fdr),
                 value = input,
                 onValueChange = onInputChange,
                 decimal = true,
-                error = error,
-                hint = "セッティング傾向バーの中央（デフォルト 7.0）"
+                error = error?.asString(),
+                hint = stringResource(R.string.config_balance_fdr_hint)
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("設定") }
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.config_balance_fdr_confirm))
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("キャンセル") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 }
@@ -254,11 +263,19 @@ private fun BalanceFdrDialog(
 // ヘルパー
 // ============================================================
 
-private fun ThemeMode.label(): String = when (this) {
-    ThemeMode.DARK -> "ダーク"
-    ThemeMode.LIGHT -> "ライト"
-    ThemeMode.SYSTEM -> "システムに従う"
-}
+/**
+ * [ThemeMode] の表示名（S-11）。
+ *
+ * enum 自体は `:core:domain`（純 Kotlin）にあり `R` を参照できないので、
+ * ラベルの対応表は `:app` 側のここに置く。when が網羅的なので、
+ * 選択肢を増やすとコンパイルエラーで気付ける。
+ */
+private val ThemeMode.labelRes: Int
+    get() = when (this) {
+        ThemeMode.DARK -> R.string.config_theme_dark
+        ThemeMode.LIGHT -> R.string.config_theme_light
+        ThemeMode.SYSTEM -> R.string.config_theme_system
+    }
 
 /** エクスポートのデフォルトファイル名。例: rcgear-export-20260702.json */
 private fun defaultExportFileName(): String {

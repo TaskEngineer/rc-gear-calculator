@@ -21,7 +21,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.taskengineer.rcgear.R
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -69,7 +71,7 @@ fun GearDiagram(
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "ギア構成  PINION ${pinion}T / SPUR ${spur}T",
+                text = stringResource(R.string.calc_gear_diagram_caption, pinion, spur),
                 style = MaterialTheme.typography.labelMedium,
                 color = textColor
             )

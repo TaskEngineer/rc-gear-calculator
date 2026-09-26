@@ -1,8 +1,10 @@
 package io.github.taskengineer.rcgear.feature.db
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.domain.model.Maker
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,9 +57,9 @@ class DbViewModel @Inject constructor(
 }
 
 /** 一覧のフィルター種別（フィルタータブに対応） */
-enum class DbFilter(val label: String) {
-    ALL("すべて"),
-    EDITED("編集済み")
+enum class DbFilter(@StringRes val labelRes: Int) {
+    ALL(R.string.db_filter_all),
+    EDITED(R.string.db_filter_edited)
 }
 
 /**

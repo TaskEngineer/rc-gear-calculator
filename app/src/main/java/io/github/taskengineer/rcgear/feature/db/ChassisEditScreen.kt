@@ -11,12 +11,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
 import io.github.taskengineer.rcgear.core.designsystem.component.RcNumberField
 import io.github.taskengineer.rcgear.core.designsystem.component.RcTextField
 import io.github.taskengineer.rcgear.core.ui.RcDetailScaffold
+import io.github.taskengineer.rcgear.core.ui.asString
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 
 /**
@@ -35,19 +38,21 @@ fun ChassisEditScreen(
     val standard = state.standard
 
     RcDetailScaffold(
-        title = standard?.name ?: "シャーシ編集",
+        title = standard?.name ?: stringResource(R.string.chassis_edit_title),
         onNavigateBack = onNavigateBack,
         events = viewModel.events,
         isLoading = state.isLoading || standard == null,
-        modifier = modifier,
-        backContentDescription = "戻る"
+        modifier = modifier
     ) {
         if (standard != null) {
             // ---- 標準値の表示 ----
-            RcCard(title = "標準値（同梱DB）", spacing = 4.dp) {
+            RcCard(title = stringResource(R.string.chassis_edit_standard_title), spacing = 4.dp) {
                 Text(
-                    text = "内部減速比 ${standard.internalRatio.formatRatio()}  /  " +
-                        "タイヤ径 ${standard.defaultTireMm}mm",
+                    text = stringResource(
+                        R.string.chassis_edit_standard_summary,
+                        standard.internalRatio.formatRatio(),
+                        standard.defaultTireMm
+                    ),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -62,19 +67,19 @@ fun ChassisEditScreen(
 
             // ---- 編集フォーム ----
             RcNumberField(
-                label = "内部減速比",
+                label = stringResource(R.string.field_internal_ratio),
                 value = state.ratioInput,
                 onValueChange = viewModel::onRatioChange,
                 decimal = true
             )
             RcNumberField(
-                label = "タイヤ径",
+                label = stringResource(R.string.field_tire_mm),
                 value = state.tireInput,
                 onValueChange = viewModel::onTireChange,
-                unit = "mm"
+                unit = stringResource(R.string.unit_millimeter)
             )
             RcTextField(
-                label = "備考",
+                label = stringResource(R.string.chassis_edit_note),
                 value = state.noteInput,
                 onValueChange = viewModel::onNoteChange,
                 singleLine = false
@@ -82,7 +87,7 @@ fun ChassisEditScreen(
 
             state.errorMessage?.let {
                 Text(
-                    text = it,
+                    text = it.asString(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -92,7 +97,7 @@ fun ChassisEditScreen(
                 onClick = viewModel::onSave,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("保存")
+                Text(stringResource(R.string.action_save))
             }
 
             // リセットは上書きが存在するときだけ出す
@@ -101,7 +106,10 @@ fun ChassisEditScreen(
                     onClick = viewModel::onResetClick,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("標準値にリセット", color = MaterialTheme.colorScheme.error)
+                    Text(
+                        text = stringResource(R.string.chassis_edit_reset),
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
@@ -110,16 +118,26 @@ fun ChassisEditScreen(
     if (state.showResetConfirm) {
         AlertDialog(
             onDismissRequest = viewModel::onResetConfirmDismiss,
-            title = { Text("リセットの確認") },
-            text = { Text("「${standard?.name}」の上書きを破棄して標準値に戻しますか？") },
+            title = { Text(stringResource(R.string.chassis_edit_reset_confirm_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.chassis_edit_reset_confirm_text,
+                        standard?.name.orEmpty()
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(onClick = viewModel::onResetConfirm) {
-                    Text("リセット", color = MaterialTheme.colorScheme.error)
+                    Text(
+                        text = stringResource(R.string.chassis_edit_reset),
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::onResetConfirmDismiss) {
-                    Text("キャンセル")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )

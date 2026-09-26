@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.theme.RcGearTheme
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
 
@@ -57,7 +59,7 @@ fun SpeedHud(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "理論最高速度",
+                text = stringResource(R.string.calc_top_speed_caption),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

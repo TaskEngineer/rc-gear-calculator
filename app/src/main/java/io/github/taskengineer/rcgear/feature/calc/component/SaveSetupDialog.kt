@@ -6,6 +6,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import io.github.taskengineer.rcgear.R
+import io.github.taskengineer.rcgear.core.ui.asString
 import io.github.taskengineer.rcgear.feature.calc.SaveDialogState
 
 /**
@@ -21,18 +24,20 @@ fun SaveSetupDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("セッティングを保存") },
+        title = { Text(stringResource(R.string.calc_save_dialog_title)) },
         text = {
             OutlinedTextField(
                 value = state.name,
                 onValueChange = onNameChange,
-                label = { Text("名前") },
-                placeholder = { Text("例: TT-02 サーキット用") },
+                label = { Text(stringResource(R.string.calc_save_dialog_name_label)) },
+                placeholder = {
+                    Text(stringResource(R.string.calc_save_dialog_name_placeholder))
+                },
                 singleLine = true,
                 isError = state.errorMessage != null,
                 supportingText = {
                     state.errorMessage?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error)
+                        Text(it.asString(), color = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -42,12 +47,16 @@ fun SaveSetupDialog(
                 onClick = onConfirm,
                 enabled = !state.isSaving
             ) {
-                Text(if (state.isSaving) "保存中..." else "保存")
+                Text(
+                    stringResource(
+                        if (state.isSaving) R.string.action_saving else R.string.action_save
+                    )
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !state.isSaving) {
-                Text("キャンセル")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

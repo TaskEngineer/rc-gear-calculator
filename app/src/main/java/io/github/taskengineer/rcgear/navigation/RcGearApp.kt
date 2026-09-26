@@ -13,6 +13,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -47,7 +48,7 @@ fun RcGearApp() {
         topBar = {
             if (isTopLevel) {
                 TopAppBar(
-                    title = { Text(currentTab?.title ?: "") }
+                    title = { Text(currentTab?.let { stringResource(it.titleRes) } ?: "") }
                 )
             }
         },
@@ -72,7 +73,7 @@ fun RcGearApp() {
                         icon = {
                             Icon(
                                 imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                                contentDescription = tab.title
+                                contentDescription = stringResource(tab.titleRes)
                             )
                         },
                         label = {

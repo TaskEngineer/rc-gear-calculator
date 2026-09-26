@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.R
+import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.domain.calculator.GearCalculator
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.Maker
@@ -213,7 +215,10 @@ class CalcViewModel @Inject constructor(
                 is SaveSetupUseCase.Result.Success -> _uiState.update {
                     it.copy(
                         saveDialog = null,
-                        savedMessage = "「${dialog.name.trim()}」を保存しました"
+                        savedMessage = UiText.Res(
+                            R.string.calc_saved,
+                            listOf(dialog.name.trim())
+                        )
                     )
                 }
 
@@ -221,7 +226,7 @@ class CalcViewModel @Inject constructor(
                     it.copy(
                         saveDialog = it.saveDialog?.copy(
                             isSaving = false,
-                            errorMessage = "名前を入力してください"
+                            errorMessage = UiText.Res(R.string.calc_save_error_blank_name)
                         )
                     )
                 }
@@ -230,7 +235,7 @@ class CalcViewModel @Inject constructor(
                     it.copy(
                         saveDialog = it.saveDialog?.copy(
                             isSaving = false,
-                            errorMessage = "同じ名前のセッティングが既にあります"
+                            errorMessage = UiText.Res(R.string.calc_save_error_duplicate_name)
                         )
                     )
                 }

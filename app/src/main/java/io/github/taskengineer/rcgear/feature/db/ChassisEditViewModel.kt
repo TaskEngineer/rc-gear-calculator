@@ -4,8 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.ui.ScreenEvent
 import io.github.taskengineer.rcgear.core.ui.ScreenEvents
+import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
@@ -92,16 +94,22 @@ class ChassisEditViewModel @Inject constructor(
         // GearCalculationInput の companion が単一の真実。
         val ratio = state.ratioInput.trim().toDoubleOrNull()
         if (ratio == null || !GearCalculationInput.isValidInternalRatio(ratio)) {
-            _uiState.update { it.copy(errorMessage = "内部減速比は正の数値で入力してください") }
+            _uiState.update {
+                it.copy(errorMessage = UiText.Res(R.string.chassis_edit_error_internal_ratio))
+            }
             return
         }
         val tire = state.tireInput.trim().toIntOrNull()
         if (tire == null || tire !in GearCalculationInput.TIRE_MM_RANGE) {
             _uiState.update {
                 it.copy(
-                    errorMessage = "タイヤ径は " +
-                        "${GearCalculationInput.MIN_TIRE_MM}〜${GearCalculationInput.MAX_TIRE_MM}mm " +
-                        "の整数で入力してください"
+                    errorMessage = UiText.Res(
+                        R.string.chassis_edit_error_tire_mm,
+                        listOf(
+                            GearCalculationInput.MIN_TIRE_MM,
+                            GearCalculationInput.MAX_TIRE_MM
+                        )
+                    )
                 )
             }
             return
@@ -153,6 +161,6 @@ data class ChassisEditUiState(
     val ratioInput: String = "",
     val tireInput: String = "",
     val noteInput: String = "",
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val showResetConfirm: Boolean = false
 )

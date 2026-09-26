@@ -40,11 +40,14 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.component.MetricsGrid
 import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
 import io.github.taskengineer.rcgear.core.designsystem.component.RcSlider
+import io.github.taskengineer.rcgear.core.ui.asString
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.feature.calc.component.BalanceBar
 import io.github.taskengineer.rcgear.feature.calc.component.ChassisSelectBottomSheet
@@ -85,9 +88,11 @@ fun CalcScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // 保存成功メッセージをスナックバーで表示する（1回だけ）
-    LaunchedEffect(state.savedMessage) {
-        state.savedMessage?.let { message ->
+    // 保存成功メッセージをスナックバーで表示する（1回だけ）。
+    // 文字列化は合成中に済ませる（showSnackbar は Composable の外で走るため）
+    val savedMessage = state.savedMessage?.asString()
+    LaunchedEffect(savedMessage) {
+        savedMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.onSavedMessageShown()
         }
@@ -105,9 +110,9 @@ fun CalcScreen(
             scope.launch {
                 val message = try {
                     saveLayerAsPng(captureLayer, it, context)
-                    "画像を保存しました"
+                    context.getString(R.string.calc_image_saved)
                 } catch (e: Exception) {
-                    "画像の保存に失敗しました: ${e.message}"
+                    context.getString(R.string.calc_image_save_failed, e.message.orEmpty())
                 }
                 snackbarHostState.showSnackbar(message)
             }
@@ -186,13 +191,13 @@ fun CalcScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.PhotoCamera,
-                        contentDescription = "画像として保存"
+                        contentDescription = stringResource(R.string.calc_export_image)
                     )
                 }
                 ExtendedFloatingActionButton(
                     onClick = viewModel::onSaveClick,
                     icon = { Icon(Icons.Filled.Save, contentDescription = null) },
-                    text = { Text("保存") }
+                    text = { Text(stringResource(R.string.action_save)) }
                 )
             }
         }
@@ -237,7 +242,7 @@ private suspend fun saveLayerAsPng(
     withContext(Dispatchers.IO) {
         context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
-        } ?: throw IllegalStateException("出力先を開けませんでした")
+        } ?: error(context.getString(R.string.io_error_open_output))
     }
 }
 
@@ -256,25 +261,25 @@ private fun SliderSection(
     state: CalcUiState,
     viewModel: CalcViewModel
 ) {
-    RcCard(title = "入力", spacing = 4.dp) {
+    RcCard(title = stringResource(R.string.calc_input_section), spacing = 4.dp) {
         RcSlider(
-            label = "ピニオン",
+            label = stringResource(R.string.field_pinion),
             value = state.pinion,
             onValueChange = viewModel::onPinionChange,
             onValueChangeFinished = viewModel::onSliderChangeFinished,
             valueRange = GearCalculationInput.MIN_PINION..GearCalculationInput.MAX_PINION,
-            unit = "T"
+            unit = stringResource(R.string.unit_teeth)
         )
         RcSlider(
-            label = "スパー",
+            label = stringResource(R.string.field_spur),
             value = state.spur,
             onValueChange = viewModel::onSpurChange,
             onValueChangeFinished = viewModel::onSliderChangeFinished,
             valueRange = GearCalculationInput.MIN_SPUR..GearCalculationInput.MAX_SPUR,
-            unit = "T"
+            unit = stringResource(R.string.unit_teeth)
         )
         RcSlider(
-            label = "モーターKV",
+            label = stringResource(R.string.field_motor_kv),
             value = state.kv,
             onValueChange = viewModel::onKvChange,
             onValueChangeFinished = viewModel::onSliderChangeFinished,
@@ -282,20 +287,20 @@ private fun SliderSection(
             step = GearCalculationInput.KV_STEP
         )
         RcSlider(
-            label = "セル数",
+            label = stringResource(R.string.field_cells),
             value = state.cells,
             onValueChange = viewModel::onCellsChange,
             onValueChangeFinished = viewModel::onSliderChangeFinished,
             valueRange = GearCalculationInput.MIN_CELLS..GearCalculationInput.MAX_CELLS,
-            unit = "S"
+            unit = stringResource(R.string.unit_cells)
         )
         RcSlider(
-            label = "タイヤ径",
+            label = stringResource(R.string.field_tire_mm),
             value = state.tireMm,
             onValueChange = viewModel::onTireMmChange,
             onValueChangeFinished = viewModel::onSliderChangeFinished,
             valueRange = GearCalculationInput.MIN_TIRE_MM..GearCalculationInput.MAX_TIRE_MM,
-            unit = "mm"
+            unit = stringResource(R.string.unit_millimeter)
         )
     }
 }

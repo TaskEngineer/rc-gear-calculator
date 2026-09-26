@@ -1,4 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  UI 文言はすべてここに置く（S-11 / REF-4）。
+  Composable は stringResource()、ViewModel は @StringRes を UiText に載せて渡す。
+
+  命名: <画面/領域>_<用途>。画面をまたいで使う語は field_ / metric_ / action_ に置く。
+  @Preview のサンプルデータだけは例外でコード内に直書きする（出荷されない開発用の値なので）。
+-->
 <resources>
     <string name="app_name">RC ギア比計算機</string>
+
+    <!-- ===== 共通操作 ===== -->
+    <string name="action_back">戻る</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_save">保存</string>
+    <string name="action_saving">保存中...</string>
+    <string name="action_delete">削除</string>
+    <string name="action_stepper_decrement">1 段下げる</string>
+    <string name="action_stepper_increment">1 段上げる</string>
+    <string name="badge_user_edited">編集済</string>
+    <string name="list_separator">・</string>
+    <string name="value_unset">未設定</string>
+
+    <!-- I/O エラー。ユーザーには「%1$s に失敗しました: 」に続けて出る -->
+    <string name="io_error_open_output">出力先を開けませんでした</string>
+    <string name="io_error_open_input">ファイルを開けませんでした</string>
+
+    <!-- ===== タブ ===== -->
+    <string name="tab_title_calc">計算</string>
+    <string name="tab_title_setups">保存一覧</string>
+    <string name="tab_title_db">シャーシDB</string>
+    <string name="tab_title_config">設定</string>
+
+    <!-- ===== 入力項目・メトリックの名前（画面をまたいで使う） ===== -->
+    <string name="field_pinion">ピニオン</string>
+    <string name="field_spur">スパー</string>
+    <string name="field_motor_kv">モーターKV</string>
+    <string name="field_cells">セル数</string>
+    <string name="field_tire_mm">タイヤ径</string>
+    <string name="field_internal_ratio">内部減速比</string>
+    <string name="metric_top_speed">最高速</string>
+    <string name="metric_primary_ratio">1次減速比</string>
+    <string name="metric_fdr">最終減速比 FDR</string>
+    <string name="metric_motor_rpm">モーターRPM</string>
+    <string name="metric_wheel_rpm">ホイールRPM</string>
+    <string name="metric_voltage">電圧</string>
+
+    <!-- 単位付きの値。数値の整形は core/ui/Format.kt、単位の連結はここ -->
+    <string name="value_teeth">%1$dT</string>
+    <string name="value_millimeter">%1$dmm</string>
+    <string name="value_cells">%1$dS</string>
+    <string name="value_number">%1$d</string>
+    <string name="value_kmh">%1$s km/h</string>
+    <string name="unit_millimeter">mm</string>
+    <string name="unit_volt">V</string>
+    <string name="unit_teeth">T</string>
+    <string name="unit_cells">S</string>
+
+    <!-- ===== CALC 画面 ===== -->
+    <string name="calc_input_section">入力</string>
+    <string name="calc_top_speed_caption">理論最高速度</string>
+    <string name="calc_balance_title">セッティング傾向</string>
+    <string name="calc_balance_speed_side">◀ 最高速</string>
+    <string name="calc_balance_torque_side">トルク ▶</string>
+    <string name="calc_gear_diagram_caption">ギア構成  PINION %1$dT / SPUR %2$dT</string>
+    <string name="calc_chassis_unselected">シャーシを選択</string>
+    <string name="calc_chassis_unselected_hint">タップしてメーカー・シャーシを選ぶ</string>
+    <string name="calc_chassis_internal_ratio">内部減速比 %1$s</string>
+    <string name="calc_export_image">画像として保存</string>
+    <string name="calc_image_saved">画像を保存しました</string>
+    <string name="calc_image_save_failed">画像の保存に失敗しました: %1$s</string>
+    <string name="calc_save_dialog_title">セッティングを保存</string>
+    <string name="calc_save_dialog_name_label">名前</string>
+    <string name="calc_save_dialog_name_placeholder">例: TT-02 サーキット用</string>
+    <string name="calc_saved">「%1$s」を保存しました</string>
+    <string name="calc_save_error_blank_name">名前を入力してください</string>
+    <string name="calc_save_error_duplicate_name">同じ名前のセッティングが既にあります</string>
+
+    <!-- ===== SETUPS（保存一覧・詳細） ===== -->
+    <string name="setups_empty_title">保存されたセッティングはありません</string>
+    <string name="setups_empty_hint">CALC 画面の保存ボタンから追加できます</string>
+    <string name="setups_card_summary">P%1$dT / S%2$dT  %3$dKV  %4$dS  %5$dmm</string>
+    <string name="setup_detail_title">セッティング詳細</string>
+    <string name="setup_detail_chassis">シャーシ</string>
+    <string name="setup_detail_internal_ratio_snapshot">内部減速比（保存時）</string>
+    <string name="setup_detail_load_to_calc">CALC に流し込む</string>
+    <string name="setup_detail_result_title">計算結果</string>
+    <string name="setup_detail_result_title_snapshot">計算結果（保存時の内部減速比）</string>
+    <string name="setup_detail_diff_warning">⚠ 内部減速比がDBと異なります</string>
+    <string name="setup_detail_diff_saved">保存時</string>
+    <string name="setup_detail_diff_current">現在</string>
+    <string name="setup_detail_diff_note">「CALC に流し込む」と現在のDB値で再計算されます</string>
+    <string name="setup_detail_delete_confirm_title">削除の確認</string>
+    <string name="setup_detail_delete_confirm_text">「%1$s」を削除しますか？この操作は取り消せません。</string>
+
+    <!-- ===== DB（シャーシDB・編集） ===== -->
+    <string name="db_filter_all">すべて</string>
+    <string name="db_filter_edited">編集済み</string>
+    <string name="db_filter_edited_count">%1$s (%2$d)</string>
+    <string name="db_maker_header">%1$s  (%2$d)</string>
+    <string name="db_empty_edited">編集済みのエントリはありません</string>
+    <string name="db_empty">シャーシDBが空です</string>
+    <string name="chassis_edit_title">シャーシ編集</string>
+    <string name="chassis_edit_standard_title">標準値（同梱DB）</string>
+    <string name="chassis_edit_standard_summary">内部減速比 %1$s  /  タイヤ径 %2$dmm</string>
+    <string name="chassis_edit_note">備考</string>
+    <string name="chassis_edit_reset">標準値にリセット</string>
+    <string name="chassis_edit_reset_confirm_title">リセットの確認</string>
+    <string name="chassis_edit_reset_confirm_text">「%1$s」の上書きを破棄して標準値に戻しますか？</string>
+    <string name="chassis_edit_error_internal_ratio">内部減速比は正の数値で入力してください</string>
+    <string name="chassis_edit_error_tire_mm">タイヤ径は %1$d〜%2$dmm の整数で入力してください</string>
+
+    <!-- ===== CONFIG 画面 ===== -->
+    <string name="config_section_display">DISPLAY</string>
+    <string name="config_section_calc_tuning">CALC TUNING</string>
+    <string name="config_section_data">DATA</string>
+    <string name="config_section_about">ABOUT</string>
+    <string name="config_theme">テーマ</string>
+    <string name="config_theme_dark">ダーク</string>
+    <string name="config_theme_light">ライト</string>
+    <string name="config_theme_system">システムに従う</string>
+    <string name="config_show_mph">mph を併記</string>
+    <string name="config_animation">アニメーション</string>
+    <string name="config_balance_fdr">基準 FDR</string>
+    <string name="config_balance_fdr_subtitle">セッティング傾向バーの中央となる最終減速比</string>
+    <string name="config_balance_fdr_hint">セッティング傾向バーの中央（デフォルト 7.0）</string>
+    <string name="config_balance_fdr_error">正の数値で入力してください</string>
+    <string name="config_balance_fdr_confirm">設定</string>
+    <string name="config_export">データを書き出す</string>
+    <string name="config_export_subtitle">保存セッティングとシャーシ上書きを JSON で保存</string>
+    <string name="config_import">データを読み込む</string>
+    <string name="config_import_subtitle">書き出した JSON から取り込み（既存データは保持）</string>
+    <string name="config_delete_all">全データを削除</string>
+    <string name="config_delete_all_subtitle">保存セッティング・上書き・履歴・設定をすべて消去</string>
+    <string name="config_delete_all_confirm_title">全データ削除の確認</string>
+    <string name="config_delete_all_confirm_text">保存セッティング・シャーシ上書き・計算履歴・設定をすべて削除します。この操作は取り消せません。</string>
+    <string name="config_delete_all_confirm_button">削除する</string>
+    <string name="config_version">バージョン</string>
+    <string name="config_export_done">データを書き出しました</string>
+    <string name="config_export_failed">書き出しに失敗しました: %1$s</string>
+    <string name="config_import_done">取り込み完了: セッティング %1$d件%2$s / 上書き %3$d件%4$s</string>
+    <string name="config_import_note_wrap">（%1$s）</string>
+    <string name="config_import_note_duplicate_name">同名スキップ %1$d件</string>
+    <string name="config_import_note_invalid">値が不正 %1$d件</string>
+    <string name="config_import_note_unknown_chassis">不明シャーシ %1$d件</string>
+    <string name="config_import_failed_format">読み込めないファイル形式です</string>
+    <string name="config_import_failed_version">このアプリより新しいバージョンのデータです</string>
+    <string name="config_import_failed">読み込みに失敗しました: %1$s</string>
+    <string name="config_delete_all_done">全データを削除しました</string>
 </resources>

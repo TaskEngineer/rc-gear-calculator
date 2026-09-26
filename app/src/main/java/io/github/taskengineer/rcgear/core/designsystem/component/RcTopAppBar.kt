@@ -10,7 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import io.github.taskengineer.rcgear.R
 
 /**
  * 派生画面（詳細・編集）のトップバー（U-1）。
@@ -18,8 +20,9 @@ import androidx.compose.ui.tooling.preview.Preview
  * `onNavigateBack` を渡せば戻るボタンが付く。3 画面が同じ
  * 「TopAppBar + 戻る矢印 + contentDescription」を書き写していたのをここに集約した。
  *
- * @param backContentDescription 戻るボタンの読み上げ文。呼び出し側が文言を持つのは、
- *   designsystem を `R.string` に依存させないため
+ * 文言は原則として呼び出し側が渡す（[title]）。ただし **常に同じ a11y ラベル**は
+ * 部品の中で `stringResource` する（S-11）。呼び出し側に「戻る」を毎回書かせると、
+ * 書き忘れた画面だけ読み上げが無音になる。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +30,6 @@ fun RcTopAppBar(
     title: String,
     modifier: Modifier = Modifier,
     onNavigateBack: (() -> Unit)? = null,
-    backContentDescription: String? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
@@ -38,7 +40,7 @@ fun RcTopAppBar(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = backContentDescription
+                        contentDescription = stringResource(R.string.action_back)
                     )
                 }
             }
@@ -52,10 +54,6 @@ fun RcTopAppBar(
 private fun RcTopAppBarPreview() {
     ComponentPreview {
         RcTopAppBar(title = "計算")
-        RcTopAppBar(
-            title = "Rd1 予選セット",
-            onNavigateBack = {},
-            backContentDescription = "戻る"
-        )
+        RcTopAppBar(title = "Rd1 予選セット", onNavigateBack = {})
     }
 }
