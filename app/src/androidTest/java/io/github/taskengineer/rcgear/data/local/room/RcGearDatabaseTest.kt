@@ -1,5 +1,6 @@
 package io.github.taskengineer.rcgear.data.local.room
 
+import android.database.sqlite.SQLiteConstraintException
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -66,6 +68,31 @@ class RcGearDatabaseTest {
         dao.insertAll(List(3) { setupEntity(name = "S$it") })
 
         assertEquals(3, dao.observeAll().first().size)
+    }
+
+    @Test
+    fun `savedSetup_一括挿入が制約違反で失敗すると全件ロールバックされる`() = runTest {
+        // BUG-3 の本命。「1 トランザクション」は全件入ることではなく、
+        // 途中で落ちたときに半端に残らないことに意味がある（Phase 0 レビュー指摘）。
+        val dao = db.savedSetupDao()
+        dao.insert(setupEntity(name = "既存"))
+
+        val conflictingEntities = listOf(
+            setupEntity(name = "新規1"),
+            setupEntity(name = "既存"), // name の UNIQUE 制約に違反する
+            setupEntity(name = "新規2")
+        )
+
+        var thrown: Throwable? = null
+        try {
+            dao.insertAll(conflictingEntities)
+        } catch (e: SQLiteConstraintException) {
+            thrown = e
+        }
+
+        assertNotNull("UNIQUE 違反が例外にならなかった", thrown)
+        // 違反行の前後にある「新規1」「新規2」も入っていないこと
+        assertEquals(listOf("既存"), dao.observeAll().first().map { it.name })
     }
 
     @Test
