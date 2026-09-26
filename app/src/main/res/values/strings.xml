@@ -147,4 +147,58 @@
     <string name="config_import_failed_version">このアプリより新しいバージョンのデータです</string>
     <string name="config_import_failed">読み込みに失敗しました: %1$s</string>
     <string name="config_delete_all_done">全データを削除しました</string>
+
+    <!-- ===== セッティングシート（M-1: TouringSetupSchema の文言） =====
+      定義（キー・型・範囲）は :core:domain のレジストリにあり、文言だけがここにある。
+      項目を足したらここにも 1 行足す。忘れると SetupFieldLabelsTest が落ちる。
+    -->
+
+    <!-- セクション -->
+    <string name="sheet_section_gear">ギア</string>
+    <string name="sheet_section_suspension">サスペンション</string>
+    <string name="sheet_section_damper">ダンパー</string>
+
+    <!-- 列（F / C / R） -->
+    <string name="sheet_column_front">フロント</string>
+    <string name="sheet_column_center">センター</string>
+    <string name="sheet_column_rear">リア</string>
+
+    <!-- 単位記号。T / mm / S は CALC 画面と共有（上の「単位付きの値」ブロック） -->
+    <string name="unit_degree">°</string>
+    <string name="unit_kv">KV</string>
+
+    <!-- 項目名（前後で同じ行になるものは 1 つの文言を共有する） -->
+    <string name="field_camber">キャンバー</string>
+    <string name="field_toe">トー</string>
+    <string name="field_caster">キャスター</string>
+    <string name="field_ride_height">車高</string>
+    <string name="field_droop">ドループ</string>
+    <string name="field_damper_oil_value">オイル番手</string>
+    <string name="field_damper_oil_unit">オイル単位</string>
+    <string name="field_damper_oil_brand">オイル銘柄</string>
+    <string name="field_damper_piston_holes">ピストン穴数</string>
+    <string name="field_damper_piston_dia">ピストン穴径</string>
+    <string name="field_spring_rate">スプリング</string>
+    <string name="field_damper_len">ダンパー長</string>
+    <string name="field_damper_upper_mount">上側取付位置</string>
+
+    <!-- 選択肢: ダンパーオイルの単位。wt と cSt は換算しないのでそのまま出す -->
+    <string name="choice_damper_oil_unit_wt">wt</string>
+    <string name="choice_damper_oil_unit_cst">cSt</string>
+
+    <!-- 選択肢: スプリングの硬さ -->
+    <string name="choice_spring_rate_ultra_soft">極ソフト</string>
+    <string name="choice_spring_rate_soft">ソフト</string>
+    <string name="choice_spring_rate_medium_soft">ミディアムソフト</string>
+    <string name="choice_spring_rate_medium">ミディアム</string>
+    <string name="choice_spring_rate_medium_hard">ミディアムハード</string>
+    <string name="choice_spring_rate_hard">ハード</string>
+    <string name="choice_spring_rate_ultra_hard">極ハード</string>
+
+    <!-- 選択肢: ダンパー上側の取付穴。内側から数える -->
+    <string name="choice_damper_mount_pos1">1（内側）</string>
+    <string name="choice_damper_mount_pos2">2</string>
+    <string name="choice_damper_mount_pos3">3</string>
+    <string name="choice_damper_mount_pos4">4</string>
+    <string name="choice_damper_mount_pos5">5（外側）</string>
 </resources>
