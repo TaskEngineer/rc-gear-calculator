@@ -71,6 +71,10 @@ android {
 }
 
 dependencies {
+    // ===== 自プロジェクトのモジュール =====
+    // 純 Kotlin JVM のドメイン層（S-9）。Android 依存はコンパイラが弾く
+    implementation(projects.core.domain)
+
     // ===== Compose BOM（依存の先頭で宣言）=====
     implementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(platform(libs.androidx.compose.bom))

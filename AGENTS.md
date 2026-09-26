@@ -8,7 +8,8 @@
 
 - ラジコンのギア比 / 理論最高速を計算する **完全オフライン** の Android アプリ。
 - Kotlin 2.0 / Jetpack Compose / Material 3 / Hilt / Room / DataStore / Navigation Compose。
-- 単一モジュール `:app`。パッケージで疑似マルチモジュール（`core` / `data` / `domain` / `feature` / `navigation`）。
+- `:app`（Android）＋ `:core:domain`（純 Kotlin JVM）の 2 モジュール。
+  `:app` 内は引き続きパッケージで疑似分割（`core` / `data` / `feature` / `navigation`）。
 - MVP（Step 1〜12）は実装済み。以降は `docs/ROADMAP.md` に沿って拡張する。
 - コード内コメント・UI 文言・ドキュメントは **日本語** で統一している。新規コードも日本語コメントで書く。
 
@@ -18,7 +19,8 @@
 # Windows / PowerShell。JAVA は PATH に無いので JAVA_HOME を明示する
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 .\gradlew.bat :app:assembleDebug --console=plain      # デバッグビルド
-.\gradlew.bat :app:testDebugUnitTest --console=plain  # 単体テスト（現在 19 件、GearCalculator のみ）
+.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 79 件）
+.\gradlew.bat :core:domain:test --console=plain       # ドメインのみ（Android を経由しないので速い）
 .\gradlew.bat :app:lintDebug --console=plain          # Android Lint
 ```
 
@@ -36,21 +38,31 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 ### 完了の定義（Definition of Done）
 
 1. `:app:assembleDebug` が通る
-2. `:app:testDebugUnitTest` が全件成功
+2. `gradlew test` が全モジュール全件成功（`:app` と `:core:domain` の両方）
 3. ドメイン層（計算・UseCase）を触ったら **必ず単体テストを追加または更新** する
-4. Room の Entity を変えたら `version` を上げ、`Migration` を書き、`app/schemas/` に新しいスキーマ JSON が生成されていることを確認する
+4. Room の Entity を変えたら `version` を上げ、**`Migration` を書くか、移行手段をドキュメント化する**。
+   `app/schemas/` に新しいスキーマ JSON が生成されていることを確認する。
+   ※ セッティングシート化（Phase 2）は破壊的再作成 + v1 JSON の再インポートという
+   手動移行を選んだため、この項に例外を設けている（`docs/HANDOFF.md` 参照）。
+   公開に踏み切る場合はこの例外を撤回すること
 5. UI 文言を追加したら、可能な限り `res/values/strings.xml` に置く（現状ハードコードが多いが、増やさない）
 
 ## 3. アーキテクチャの要点（as-built）
 
 ```
+:app
 feature/*   Composable Screen + ViewModel + UiState（画面ごと）
     ↓
-domain/     model（Chassis, SavedSetup, GearCalculationInput/Result, UserPreferences）
-            usecase（SaveSetup / ExportData / ImportData）
-core/domain GearCalculator（純粋関数。Web 版の計算式を移植）
+:core:domain（純 Kotlin JVM。android を import した瞬間にビルドが落ちる）
+domain/model       Chassis, SavedSetup, GearCalculationInput/Result, UserPreferences, ThemeMode
+domain/calculator  GearCalculator（純粋関数。Web 版の計算式を移植）
+domain/repository  Repository の interface（実装は :app の data/repository/*Impl）
+domain/backup      BackupCodec（エクスポート JSON の形式は data 側の実装が知る）
+domain/common      TimeProvider
+domain/usecase     SaveSetup / ExportData / ImportData
     ↑
-data/       repository（Chassis / Setup / Preferences / CalculationHistory）
+:app
+data/       repository（Chassis / Setup / Preferences / CalculationHistory の *Impl）
             local/room（Entity・DAO・RcGearDatabase v1）
             local/datastore（UserPreferencesDataSource）
             local/asset（ChassisJsonProvider: assets/chassis-db.json をキャッシュ）
@@ -62,9 +74,9 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 - **CalcRequestBus**（`core/common`）は SETUPS → CALC の「流し込み」専用のシングルトン StateFlow。
 - UiState は immutable data class。ViewModel が `MutableStateFlow.update { copy(...) }` で更新する。
 - 計算はスライダーの `onValueChange` ごとに同期実行（debounce なし）。DataStore 保存は操作確定時のみ。
-- 現状の層違反（`domain/usecase` が `data.repository` と `data.local.file.dto` を直接参照、
-  `domain/model/UserPreferences` が `core.designsystem.theme.ThemeMode` を参照）は
-  `docs/HANDOFF.md` の負債リストに載っている。**新規コードで層違反を増やさない**。
+- 層違反は S-5 / S-9 で解消済み。`:core:domain` は Android プラグインを適用していないため、
+  **`android.*` や Compose を import すると即コンパイルエラーになる**。
+  ドメインに何かを足すときは「Android 無しで意味が通るか」を毎回問うこと。
 
 ## 4. 変えてはいけないもの
 
@@ -78,11 +90,17 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 
 ## 5. コーディング規約
 
-- Kotlin 公式スタイル（`kotlin.code.style=official`）。ktlint / detekt は未導入（導入は ROADMAP に記載）。
+- Kotlin 公式スタイル（`kotlin.code.style=official`）。ktlint / detekt は未導入（S-3 で導入予定）。
+- テストは Fake を優先する（`app/src/test/**/fake/`）。MockK は Fake を書くのが割に合わないときだけ。
+  Fake は本物の制約（ユニーク制約・並び順）を再現すること。それが Fake を使う理由なので。
+- **instrumented テストのメソッド名にスペースを入れない。** minSdk 26（DEX < 040）では
+  SimpleName に空白を置けず `dexBuilder` が落ちる。JVM 単体テストはバッククォート内に置けるので、
+  両者でルールが違う。
 - Compose: 画面は `XxxScreen(viewModel = hiltViewModel())` の薄いラッパー ＋ 状態を受け取る `XxxContent`。
   プレビュー可能な stateless Composable を優先する。
 - ViewModel は `@HiltViewModel`。画面遷移引数は `SavedStateHandle` から取る（`checkNotNull`）。
-- 数値の表示整形は `String.format(Locale.US, ...)` を使う（Locale 未指定は不可。小数点が `,` になる地域がある）。
+- 数値の表示整形は `core/ui/Format.kt` の拡張関数（`formatRatio()` 等）を使う。
+  新しく `String.format` を書くときは必ず `Locale.US` を指定する（小数点が `,` になる地域がある）。
 - 例外を握りつぶさない。ユーザーに見せるエラーは UiState の `message` / `errorMessage` に載せて Snackbar / ダイアログで出す。
 - 1 タスク 1 コミット。メッセージは `feat: ...` / `fix: ...` / `refactor: ...` / `docs: ...` / `test: ...`（Conventional Commits）。
   これまでの履歴は `feat: Step N - ...` 形式。以降は Step 番号ではなく内容で書く。
@@ -92,7 +110,7 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 
 | やりたいこと | 触る場所 |
 |---|---|
-| 計算式・新メトリック追加 | `core/domain/GearCalculator.kt` → `domain/model/GearCalculationResult.kt` → `GearCalculatorTest` → `feature/calc/component/MetricsGrid.kt` |
+| 計算式・新メトリック追加 | `:core:domain` の `domain/calculator/GearCalculator.kt` → `domain/model/GearCalculationResult.kt` → `GearCalculatorTest` → `feature/calc/component/MetricsGrid.kt` |
 | シャーシを追加 | `app/src/main/assets/chassis-db.json`（`id` は `メーカー_型番` のスネークケース、重複不可） |
 | 設定項目を追加 | `domain/model/UserPreferences.kt` → `data/local/datastore/UserPreferencesDataSource.kt`（Keys）→ `PreferencesRepository` → `feature/config` |
 | 新しい画面 | `navigation/Routes.kt` → `RcGearNavHost.kt` → `feature/<name>/` |
