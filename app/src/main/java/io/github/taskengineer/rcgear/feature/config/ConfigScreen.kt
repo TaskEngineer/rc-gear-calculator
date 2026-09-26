@@ -34,8 +34,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.github.taskengineer.rcgear.BuildConfig
-import io.github.taskengineer.rcgear.core.designsystem.theme.ThemeMode
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
+import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

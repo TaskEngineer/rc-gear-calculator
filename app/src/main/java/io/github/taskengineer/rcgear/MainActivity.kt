@@ -10,7 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.taskengineer.rcgear.core.designsystem.theme.RcGearTheme
-import io.github.taskengineer.rcgear.core.designsystem.theme.ThemeMode
+import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import io.github.taskengineer.rcgear.navigation.RcGearApp
 
 @AndroidEntryPoint

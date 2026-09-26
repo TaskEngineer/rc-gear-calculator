@@ -1,7 +1,5 @@
 package io.github.taskengineer.rcgear.domain.model
 
-import io.github.taskengineer.rcgear.core.designsystem.theme.ThemeMode
-
 /**
  * ユーザー設定のドメインモデル（PLAN 6.3）。
  * DataStore Preferences に永続化され、UserPreferencesDataSource がこの型との相互変換を担う。

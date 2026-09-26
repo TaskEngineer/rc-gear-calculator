@@ -4,13 +4,13 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.taskengineer.rcgear.core.designsystem.theme.ThemeMode
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
 import io.github.taskengineer.rcgear.data.local.file.JsonFileDataSource
 import io.github.taskengineer.rcgear.data.repository.CalculationHistoryRepository
 import io.github.taskengineer.rcgear.data.repository.ChassisRepository
 import io.github.taskengineer.rcgear.data.repository.PreferencesRepository
 import io.github.taskengineer.rcgear.data.repository.SetupRepository
+import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
 import io.github.taskengineer.rcgear.domain.usecase.ExportDataUseCase
 import io.github.taskengineer.rcgear.domain.usecase.ImportDataUseCase
