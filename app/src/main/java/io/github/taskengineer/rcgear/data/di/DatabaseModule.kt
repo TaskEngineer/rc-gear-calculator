@@ -27,13 +27,20 @@ object DatabaseModule {
     /**
      * Database の生成。
      *
-     * fallbackToDestructiveMigration について（S-10）:
+     * 破壊的再作成について（S-10、範囲を限定: Phase 0 レビュー）:
      * Migration を 1 つも登録していない状態で `version` を上げると、Room は
      * ワイプではなく IllegalStateException で落ちる。本アプリは未公開・
      * ユーザーは開発者本人のみで、データの持ち出しは CONFIG の JSON
-     * エクスポートで担保されているため、スキーマ変更時は作り直しを選ぶ。
+     * エクスポートで担保されているため、Phase 2 の v1 → v2 だけは作り直しを選ぶ
+     * （HANDOFF §5.2）。
      *
-     * 公開する場合はここを外し、Migration と MigrationTestHelper による
+     * ただし `fallbackToDestructiveMigration()`（無引数）だと **将来の全ての
+     * バージョンで** 移行漏れが黙ってデータ消失になる。手動移行を選んだのは
+     * v1 からの 1 回だけなので、`fallbackToDestructiveMigrationFrom(1)` で
+     * 起点バージョンを限定する。v2 以降で Migration を書き忘れた場合は
+     * 起動時にクラッシュして気づける。
+     *
+     * 公開する場合はこの行ごと外し、Migration と MigrationTestHelper による
      * テスト（ROADMAP P-7）を用意すること。
      */
     @Provides
@@ -44,7 +51,7 @@ object DatabaseModule {
             RcGearDatabase::class.java,
             RcGearDatabase.DATABASE_NAME
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigrationFrom(1)
             .build()
 
     @Provides
