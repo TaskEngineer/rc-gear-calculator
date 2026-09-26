@@ -21,9 +21,9 @@
 | モジュール | `:app`（Android）＋ `:core:domain`（純 Kotlin JVM） |
 | ビルド | `:app:assembleDebug` 成功（2026-09-26 確認） |
 | 単体テスト | **87 件成功**（`:core:domain` 30 / `:app` 57）。GearCalculator・入力値検証・表示整形・UseCase 3 本・CalcViewModel・JsonBackupCodec |
-| Instrumented / UI テスト | DAO テスト 6 件を用意済み（`app/src/androidTest/`）。`assembleDebugAndroidTest` は成功するが **端末上での実行は未検証**（実機 / エミュレータが要る） |
+| Instrumented / UI テスト | DAO テスト **6 件成功**（`app/src/androidTest/`）。2026-09-26 に AVD `Pixel_8`（API 34）で `connectedDebugAndroidTest` 実行、failures 0 / errors 0。UI テストは未着手 |
 | Lint / 静的解析 | **ktlint 導入済み**（`ktlintCheck` 緑）。Android Lint も CI で実行 |
-| CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**ただし一度も実行されていない**（このブランチが未 push。`origin/main` は 698fea4 のまま）。実環境での成功は未確認 |
+| CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**2026-09-26 の PR #1 で初回実行、全ステップ緑**（5m14s）。instrumented テストは CI に入っていない（エミュレータが要るため。§6 参照） |
 | リリース署名 | 未設定。`versionCode = 1`、`versionName = 0.1.0` |
 | スクリーンショット | README に TODO のまま（`docs/screenshots/` 未作成） |
 | ライセンス | TBD |
@@ -321,7 +321,7 @@ Phase 0 完了後に受けた外部レビュー。Phase 1 に入る前に処理�
 | 高: `fallbackToDestructiveMigration()` の対象が全バージョンで、将来の移行漏れもデータ消失になる | `fallbackToDestructiveMigrationFrom(1)` に限定（§5.2） |
 | 高: `ExportDataDto.schemaVersion` の既定値が `CURRENT_SCHEMA_VERSION` に連動しており、v2 を出すと `schemaVersion` キーの無い旧ファイルを v2 と誤認する | 既定値を `OMITTED_SCHEMA_VERSION = 1`（不変）に分離し、書き出し側は版を明示。S-6 以前の実形式を `JsonBackupCodecTest` のゴールデンデータとして固定（codec の形式テストはこれまで 0 件だった） |
 | 高: Kotlin レジストリ案が `:core:domain` で `@StringRes` を持つ前提になっており、モジュール境界と矛盾する | 定義は domain、ラベル解決は `:app`（§5.3） |
-| 中: CI が一度も実行されていない / instrumented テストが端末上で未実行 | **未解決**。CI はブランチを push した時点で判明する。DAO テストの実行は実機かエミュレータが必要（§1 の表に明記） |
+| 中: CI が一度も実行されていない / instrumented テストが端末上で未実行 | **解決**。PR #1 で CI 初回実行が全ステップ緑（5m14s）。DAO テスト 6 件も AVD `Pixel_8`（API 34）で実行し failures 0。手順は §6 に記載 |
 | 中: DAO テストの「一括挿入は 1 トランザクション」が正常系しか見ておらず、失敗時のロールバックを検証していない | UNIQUE 違反で全件ロールバックすることを確認するテストを追加（androidTest 6 件目） |
 | 低: `AGENTS.md` に「`org.gradle.java.home` はコミット済み」「ktlint 未導入」という古い記述が残っている | 両方修正 |
 | 手動移行で DataStore の表示設定と計算履歴が戻らない点が未記載 | §5.2 に表で明記 |
@@ -334,6 +334,26 @@ Phase 0 完了後に受けた外部レビュー。Phase 1 に入る前に処理�
 - **ktlint の設定を変えたら `--rerun-tasks` ではなく `gradlew --stop` を挟んで確認する。**
   ワーカーが `.editorconfig` の解決結果を抱え込むことがあり、設定が効いているかの判断を誤る
   （S-3 で実際に何度も誤った計測をした）。
+
+### 6.1 instrumented テストの実行手順
+
+CI には入れていない（GitHub Actions でエミュレータを起動すると 1 回あたり数分＋不安定さが増すため、
+Room を v2 に作り替える Phase 2 までは手動実行で足りると判断した）。ローカルでの手順:
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$SDK = "$env:LOCALAPPDATA\Android\Sdk"
+
+& "$SDK\emulator\emulator.exe" -avd Pixel_8 -no-snapshot-load -no-boot-anim   # 別ウィンドウで起動したまま
+& "$SDK\platform-tools\adb.exe" wait-for-device                               # boot_completed=1 まで待つ
+.\gradlew.bat :app:connectedDebugAndroidTest --console=plain
+```
+
+- 結果 XML は `app/build/outputs/androidTest-results/connected/debug/`、HTML は `app/build/reports/androidTests/connected/`。
+- **Gradle のコンソール出力は「Finished 6 tests」しか言わず、失敗件数を出さない。**
+  緑かどうかは終了コードか XML の `failures` / `errors` 属性で確認する。
+- AVD が無い場合は Android Studio の Device Manager で作る（API 34 / `Pixel_8` で確認済み）。
+  minSdk 26 なので古い API でも動くはずだが未検証。
 
 ## 7. 動作確認チェックリスト（手動、リリース前）
 
