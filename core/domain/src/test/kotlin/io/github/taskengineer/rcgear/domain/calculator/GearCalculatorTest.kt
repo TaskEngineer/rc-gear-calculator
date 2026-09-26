@@ -259,27 +259,22 @@ class GearCalculatorTest {
     // 入力バリデーション
     // ===============================================================
 
+    // M-2 で範囲の検証は FieldValidator（レジストリ駆動）に移した。
+    // ここに残るのは「計算式が成立しない値」だけで、スライダーの範囲外は例外にしない。
+
     @Test
-    fun `validation_ピニオンが下限未満なら IllegalArgumentException`() {
-        assertThrows(IllegalArgumentException::class.java) {
+    fun `validation_スライダーの範囲外でも計算はできる`() {
+        val result = GearCalculator.calculate(
             GearCalculationInput(
                 pinion = 13,  // MIN_PINION=14 未満
                 spur = 84, internalRatio = 2.6,
-                kv = 6500, cells = 2, tireMm = 63
-            )
-        }
-    }
-
-    @Test
-    fun `validation_セル数が範囲外なら IllegalArgumentException`() {
-        assertThrows(IllegalArgumentException::class.java) {
-            GearCalculationInput(
-                pinion = 22, spur = 84, internalRatio = 2.6,
                 kv = 6500,
-                cells = 5,  // MAX_CELLS=4 を超える
+                cells = 5,    // MAX_CELLS=4 を超える
                 tireMm = 63
             )
-        }
+        )
+        assertTrue(result.topSpeedKmh > 0.0)
+        assertTrue(result.finalDriveRatio.isFinite())
     }
 
     @Test

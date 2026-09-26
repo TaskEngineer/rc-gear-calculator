@@ -24,6 +24,7 @@ import io.github.taskengineer.rcgear.domain.model.GearCalculationInput.Companion
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput.Companion.isValidInternalRatio
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -150,7 +151,34 @@ class GearCalculationInputTest {
         )
     }
 
-    // ----- ctor_: isValid と コンストラクタの判定が一致していること -----
+    // ----- ctor_: 残っている不変条件はゼロ除算の防止だけ（M-2） -----
+
+    @Test
+    fun `ctor_範囲外でも計算が成立する値は通る`() {
+        // M-2 で範囲の検証は FieldValidator に移した。セッティングシートは
+        // 実測値も書ける場所なので「スライダーの外 = 存在してはいけない値」ではない
+        val input = GearCalculationInput(
+            pinion = 50,
+            spur = 200,
+            internalRatio = 9.9,
+            kv = 20000,
+            cells = 6,
+            tireMm = 200
+        )
+        assertEquals(50, input.pinion)
+    }
+
+    @Test
+    fun `ctor_ゼロ除算になる値だけは拒否する`() {
+        fun input(pinion: Int = 22, spur: Int = 84, internalRatio: Double = 2.6) =
+            GearCalculationInput(pinion, spur, internalRatio, MIN_KV, MIN_CELLS, MIN_TIRE_MM)
+
+        assertThrows(IllegalArgumentException::class.java) { input(pinion = 0) }
+        assertThrows(IllegalArgumentException::class.java) { input(pinion = -1) }
+        assertThrows(IllegalArgumentException::class.java) { input(spur = 0) }
+        assertThrows(IllegalArgumentException::class.java) { input(internalRatio = 0.0) }
+        assertThrows(IllegalArgumentException::class.java) { input(internalRatio = Double.NaN) }
+    }
 
     @Test
     fun `ctor_isValid が true の値はコンストラクタを通る`() {

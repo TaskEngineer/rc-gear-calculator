@@ -6,11 +6,17 @@ package io.github.taskengineer.rcgear.domain.model
  * Web版（index.html）の `update()` 関数で使われていた入力値に対応する。
  * すべて Int / Double の値型のみを保持する単純な immutable データクラス。
  *
- * 妥当性チェック（init ブロック）について:
- *   - UI 側のスライダーで min/max を制限していても、JSON インポートや
- *     保存値の読み込みなど別経路で生成される可能性があるため、ドメイン層で
- *     値の範囲をガードしておく。範囲外なら IllegalArgumentException を投げる。
- *   - スライダーの上下限は Web 版に合わせている（index.html L426 付近）。
+ * 妥当性チェックについて（M-2 で方針変更）:
+ *   - **範囲の検証はここではなく `validation/FieldValidator` が持つ。**
+ *     範囲を知っているのはレジストリ（`TouringSetupSchema`）だけ、という状態にするため。
+ *     init で範囲を require していた頃は、スライダー以外の経路（シャーシ上書き /
+ *     JSON インポート / DataStore の古い値）から範囲外の値が来るとアプリが落ちていた
+ *     （BUG-1 / BUG-2）。セッティングシートは実測値も書ける場所なので、
+ *     「スライダーの外＝存在してはいけない値」ではない。
+ *   - init に残すのは **計算が成立しない値だけ**。ゼロ除算になる 2 つに限る。
+ *     これにより `GearCalculator` は非 null の結果を返す全域関数のままでいられる。
+ *   - 上下限の定数と clamp / isValid はここに残す。スライダーの range と
+ *     レジストリのギアセクションが同じ値を指していることは `TouringSetupSchemaTest` が見る。
  */
 data class GearCalculationInput(
     /** ピニオン歯数。Web版スライダー: min=14, max=40, step=1 */
@@ -32,16 +38,15 @@ data class GearCalculationInput(
     val tireMm: Int
 ) {
     init {
-        // ピニオンは 1 以上。0 だと spur ÷ pinion でゼロ除算になる。
-        require(pinion in PINION_RANGE) { "pinion must be in $PINION_RANGE but was $pinion" }
-        require(spur in SPUR_RANGE) { "spur must be in $SPUR_RANGE but was $spur" }
-        // 内部減速比は正の値。1.0 はベルト直結シャーシなどで実在する値。
+        // ここに残すのは「計算式が成立しない値」だけ。範囲は FieldValidator の担当。
+        // pinion が 0 だと spur ÷ pinion で、spur か internalRatio が 0 だと
+        // モーターRPM ÷ FDR でゼロ除算になり、結果が Infinity / NaN になる。
+        require(pinion > 0) { "pinion must be > 0 but was $pinion" }
+        require(spur > 0) { "spur must be > 0 but was $spur" }
+        // 内部減速比は正の有限値。1.0 はベルト直結シャーシなどで実在する値。
         require(isValidInternalRatio(internalRatio)) {
-            "internalRatio must be > 0 but was $internalRatio"
+            "internalRatio must be a positive finite number but was $internalRatio"
         }
-        require(kv in KV_RANGE) { "kv must be in $KV_RANGE but was $kv" }
-        require(cells in CELLS_RANGE) { "cells must be in $CELLS_RANGE but was $cells" }
-        require(tireMm in TIRE_MM_RANGE) { "tireMm must be in $TIRE_MM_RANGE but was $tireMm" }
     }
 
     /**
@@ -76,11 +81,14 @@ data class GearCalculationInput(
 
         // ----- 範囲判定・クランプ（REF-1: 入力値検証の一元化） -----
         //
-        // このコンストラクタは範囲外で例外を投げる。しかし値の供給元は
-        // スライダーだけではなく、シャーシ DB の上書き（BUG-1）・エクスポート
-        // JSON のインポート（BUG-2）・DataStore に残った過去の値 もある。
+        // 値の供給元はスライダーだけではなく、シャーシ DB の上書き（BUG-1）・
+        // エクスポート JSON のインポート（BUG-2）・DataStore に残った過去の値もある。
         // 各呼び出し側が自前で min/max を書くと必ずズレるため、範囲の定義と
         // 判定・クランプはここに集約する。
+        //
+        // M-2 以降、これは「CALC 画面のスライダーが動ける範囲」を表す。
+        // シートに入る値の検証はレジストリ駆動の FieldValidator が行い、
+        // 両者が同じ値を指していることは TouringSetupSchemaTest が保証する。
 
         val PINION_RANGE: IntRange = MIN_PINION..MAX_PINION
         val SPUR_RANGE: IntRange = MIN_SPUR..MAX_SPUR

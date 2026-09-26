@@ -43,7 +43,8 @@ object GearCalculator {
     ): GearCalculationResult {
         // ---- ギア比 ----
         // 1次減速比 = スパー ÷ ピニオン
-        // (pinion >= 14 が GearCalculationInput の init で保証されているのでゼロ除算しない)
+        // (pinion > 0 / spur > 0 / internalRatio > 0 は GearCalculationInput の init が
+        //  保証しているので、ここでゼロ除算・NaN は起きない)
         val primary = input.spur.toDouble() / input.pinion.toDouble()
 
         // 最終減速比 (FDR) = 1次 × 内部減速
