@@ -3,7 +3,6 @@ package io.github.taskengineer.rcgear.domain.usecase
 import io.github.taskengineer.rcgear.data.local.file.JsonBackupCodec
 import io.github.taskengineer.rcgear.domain.common.TimeProvider
 import io.github.taskengineer.rcgear.fake.FakeChassisRepository
-import io.github.taskengineer.rcgear.fake.FakeSetupRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -17,6 +16,9 @@ import org.junit.Test
  * しかもユーザーから見ると「バックアップしたのに戻せない」という最悪の症状になる。
  * そのため往復テストを 1 本置いて、両 UseCase を同時に縛る。
  *
+ * **M-3 時点の対象は上書きのみ。** 保存セッティングは車 + セッティングシートに
+ * 置き換わり、その往復は M-6（エクスポート v2 + v1 → v2 インポータ）で入る。
+ *
  * メソッド名のプレフィクスでカテゴリを表現 (export_, roundtrip_)。
  */
 class ExportDataUseCaseTest {
@@ -28,7 +30,7 @@ class ExportDataUseCaseTest {
 
     @Test
     fun `export_空のDBでも有効な JSON を書き出す`() = runTest {
-        val json = exportFrom(FakeSetupRepository(), FakeChassisRepository())
+        val json = exportFrom(FakeChassisRepository())
 
         assertTrue(json.contains("\"schemaVersion\": 1"))
         assertTrue(json.contains("\"exportedAt\": $EXPORTED_AT"))
@@ -36,7 +38,7 @@ class ExportDataUseCaseTest {
 
     @Test
     fun `export_書き出し時刻は TimeProvider の値になる`() = runTest {
-        val json = exportFrom(FakeSetupRepository(), FakeChassisRepository())
+        val json = exportFrom(FakeChassisRepository())
 
         // 壁時計を直接読んでいたらこの値にはならない
         assertTrue(json.contains("\"exportedAt\": $EXPORTED_AT"))
@@ -44,9 +46,11 @@ class ExportDataUseCaseTest {
 
     @Test
     fun `export_端末固有の id は書き出されない`() = runTest {
-        val setups = FakeSetupRepository().apply { save("Rd1", "tamiya_tt02", 22, 84, 2.6, 6500, 2, 63) }
+        val chassis = FakeChassisRepository().apply {
+            overrideChassis("tamiya_tt02", internalRatio = 2.7, defaultTireMm = null, note = null)
+        }
 
-        val json = exportFrom(setups, FakeChassisRepository())
+        val json = exportFrom(chassis)
 
         assertTrue("Room の自動採番 id が漏れている", !json.contains("\"id\""))
     }
@@ -55,56 +59,42 @@ class ExportDataUseCaseTest {
 
     @Test
     fun `roundtrip_エクスポートした JSON をインポートすると同じ内容が復元される`() = runTest {
-        val source = FakeSetupRepository().apply {
-            now = 555L
-            save("Rd1", "tamiya_tt02", 22, 84, 2.6, 6500, 2, 63)
-            save("Rd2", "tamiya_ta08", 26, 90, 1.9, 7500, 2, 62)
-        }
         val sourceChassis = FakeChassisRepository().apply {
             now = 666L
             overrideChassis("tamiya_tt02", internalRatio = 2.7, defaultTireMm = null, note = null)
         }
 
-        val json = exportFrom(source, sourceChassis)
+        val json = exportFrom(sourceChassis)
 
         // まっさらな DB に戻す
-        val restored = FakeSetupRepository()
         val restoredChassis = FakeChassisRepository()
-        val result = ImportDataUseCase(restored, restoredChassis, codec)(json)
+        val result = ImportDataUseCase(restoredChassis, codec)(json)
 
         assertEquals(
             ImportDataUseCase.Result.Success(
-                importedSetups = 2,
-                skippedSetups = 0,
-                invalidSetups = 0,
+                pendingLegacySetups = 0,
                 importedOverrides = 1,
                 skippedOverrides = 0,
                 invalidOverrides = 0
             ),
             result
         )
-        // id は端末固有なので一致しない。それ以外は一致する
-        assertEquals(
-            source.stored.map { it.copy(id = 0) }.toSet(),
-            restored.stored.map { it.copy(id = 0) }.toSet()
-        )
         assertEquals(sourceChassis.storedOverrides, restoredChassis.storedOverrides)
     }
 
     @Test
     fun `roundtrip_2回書き出した JSON は同一になる`() = runTest {
-        val setups = FakeSetupRepository().apply { save("Rd1", "tamiya_tt02", 22, 84, 2.6, 6500, 2, 63) }
-        val chassis = FakeChassisRepository()
+        val chassis = FakeChassisRepository().apply {
+            overrideChassis("tamiya_tt02", internalRatio = 2.7, defaultTireMm = null, note = null)
+        }
 
-        assertEquals(exportFrom(setups, chassis), exportFrom(setups, chassis))
+        assertEquals(exportFrom(chassis), exportFrom(chassis))
     }
 
     // ----- ヘルパー -----
 
-    private suspend fun exportFrom(
-        setupRepository: FakeSetupRepository,
-        chassisRepository: FakeChassisRepository
-    ): String = ExportDataUseCase(setupRepository, chassisRepository, codec, fixedTime)()
+    private suspend fun exportFrom(chassisRepository: FakeChassisRepository): String =
+        ExportDataUseCase(chassisRepository, codec, fixedTime)()
 
     private companion object {
         const val EXPORTED_AT = 1_750_000_000_000L

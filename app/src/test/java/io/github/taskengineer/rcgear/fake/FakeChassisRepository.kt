@@ -61,7 +61,16 @@ class FakeChassisRepository(
 
     override suspend fun getAllOverridesOnce(): List<ChassisOverride> = storedOverrides
 
+    /**
+     * [restoreAllOverrides] の呼ばれた回数。
+     * 1 件ずつ insert すると途中失敗で半端に取り込まれる（BUG-3）ので、
+     * 「一括で 1 回」を検証するために数える。
+     */
+    var restoreAllOverridesCallCount: Int = 0
+        private set
+
     override suspend fun restoreAllOverrides(overrides: List<ChassisOverride>) {
+        restoreAllOverridesCallCount++
         if (overrides.isEmpty()) return
         this.overrides.value += overrides.associateBy { it.chassisId }
     }

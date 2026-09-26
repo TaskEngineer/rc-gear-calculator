@@ -8,9 +8,11 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.taskengineer.rcgear.data.local.room.RcGearDatabase
-import io.github.taskengineer.rcgear.data.local.room.dao.CalculationHistoryDao
+import io.github.taskengineer.rcgear.data.local.room.dao.CarDao
 import io.github.taskengineer.rcgear.data.local.room.dao.ChassisOverrideDao
-import io.github.taskengineer.rcgear.data.local.room.dao.SavedSetupDao
+import io.github.taskengineer.rcgear.data.local.room.dao.SetupSheetDao
+import io.github.taskengineer.rcgear.data.local.room.dao.SetupValueDao
+import io.github.taskengineer.rcgear.data.local.room.dao.UserChassisDao
 import javax.inject.Singleton
 
 /**
@@ -55,12 +57,17 @@ object DatabaseModule {
             .build()
 
     @Provides
-    fun provideSavedSetupDao(db: RcGearDatabase): SavedSetupDao = db.savedSetupDao()
+    fun provideCarDao(db: RcGearDatabase): CarDao = db.carDao()
+
+    @Provides
+    fun provideSetupSheetDao(db: RcGearDatabase): SetupSheetDao = db.setupSheetDao()
+
+    @Provides
+    fun provideSetupValueDao(db: RcGearDatabase): SetupValueDao = db.setupValueDao()
+
+    @Provides
+    fun provideUserChassisDao(db: RcGearDatabase): UserChassisDao = db.userChassisDao()
 
     @Provides
     fun provideChassisOverrideDao(db: RcGearDatabase): ChassisOverrideDao = db.chassisOverrideDao()
-
-    @Provides
-    fun provideCalculationHistoryDao(db: RcGearDatabase): CalculationHistoryDao =
-        db.calculationHistoryDao()
 }

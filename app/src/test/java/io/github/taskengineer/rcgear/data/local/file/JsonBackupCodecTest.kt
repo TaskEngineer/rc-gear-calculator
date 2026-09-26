@@ -4,7 +4,6 @@ import io.github.taskengineer.rcgear.data.local.file.dto.ExportDataDto
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.backup.BackupData
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
-import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -64,11 +63,13 @@ class JsonBackupCodecTest {
         assertTrue("旧形式が読めなくなっている: $result", result is BackupCodec.DecodeResult.Success)
         val data = (result as BackupCodec.DecodeResult.Success).data
         assertEquals(1727000000000L, data.exportedAt)
-        assertEquals(1, data.setups.size)
-        assertEquals("Rd1", data.setups[0].name)
-        assertEquals(22, data.setups[0].pinion)
+        // v1 の保存セッティングは legacySetups に入る（M-3 で本体のテーブルは消えた）。
+        // v2 の形への変換は M-6 の v1 -> v2 インポータが行う
+        assertEquals(1, data.legacySetups.size)
+        assertEquals("Rd1", data.legacySetups[0].name)
+        assertEquals(22, data.legacySetups[0].pinion)
         // id は端末固有なので JSON に無い。未採番の 0 で埋まる
-        assertEquals(0L, data.setups[0].id)
+        assertEquals(0L, data.legacySetups[0].id)
         assertEquals(1, data.overrides.size)
         assertEquals(2.7, data.overrides[0].internalRatio ?: 0.0, 1e-9)
         // 省略された任意フィールドは null（= 上書きしない）
@@ -98,21 +99,6 @@ class JsonBackupCodecTest {
     fun `エンコードとデコードは往復する`() {
         val original = BackupData(
             exportedAt = 1727000000000L,
-            setups = listOf(
-                SavedSetup(
-                    id = 7,
-                    name = "Rd1",
-                    chassisId = "tamiya_tt02",
-                    pinion = 22,
-                    spur = 84,
-                    internalRatioSnapshot = 2.6,
-                    kv = 6500,
-                    cells = 2,
-                    tireMm = 63,
-                    createdAt = 1726000000000L,
-                    updatedAt = 1727000000000L
-                )
-            ),
             overrides = listOf(
                 ChassisOverride(
                     chassisId = "tamiya_tt02",
@@ -127,9 +113,15 @@ class JsonBackupCodecTest {
         val result = codec.decode(codec.encode(original))
 
         assertTrue(result is BackupCodec.DecodeResult.Success)
-        val decoded = (result as BackupCodec.DecodeResult.Success).data
-        // id だけは往復しない（端末固有なので 0 に戻る）
-        assertEquals(original.copy(setups = original.setups.map { it.copy(id = 0) }), decoded)
+        assertEquals(original, (result as BackupCodec.DecodeResult.Success).data)
+    }
+
+    @Test
+    fun `v1 の保存セッティングは書き出さない`() {
+        // M-3 でテーブルごと無くなったので、書き出す側がこれを埋めることはない。
+        // 読む側（legacySetups）は AGENTS.md §4 に従って永久に残す
+        val json = codec.encode(BackupData(exportedAt = 1L))
+        assertTrue(json.contains("\"setups\": []"))
     }
 
     @Test

@@ -1,17 +1,10 @@
 package io.github.taskengineer.rcgear.feature.calc
 
-import androidx.lifecycle.SavedStateHandle
-import io.github.taskengineer.rcgear.R
-import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
-import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
-import io.github.taskengineer.rcgear.domain.usecase.SaveSetupUseCase
-import io.github.taskengineer.rcgear.fake.FakeCalculationHistoryRepository
 import io.github.taskengineer.rcgear.fake.FakeChassisRepository
 import io.github.taskengineer.rcgear.fake.FakePreferencesRepository
-import io.github.taskengineer.rcgear.fake.FakeSetupRepository
 import io.github.taskengineer.rcgear.testing.MainDispatcherRule
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -26,14 +19,15 @@ import org.junit.Test
  * [CalcViewModel] のテスト（REF-3 / S-6）。
  *
  * ここで一番守りたいのは **BUG-1 / BUG-2 の再発防止**。
- * `GearCalculationInput` は範囲外で例外を投げる設計なので、
- * 状態を変える全経路（前回値の復元・シャーシ選択・スライダー・流し込み）が
- * `recalculate()` のクランプを通っていないと、画面を開いた瞬間に落ちる。
+ * 状態を変える全経路（前回値の復元・シャーシ選択・スライダー）が
+ * `recalculate()` のクランプを通っていないと、スライダーの表示と計算結果がズレる。
  * この「全経路が 1 点に集まっている」という性質はコードを読まないと分からず、
  * 壊れても気づきにくいので、経路ごとにテストを置く。
  *
- * メソッド名のプレフィクスでカテゴリを表現
- * (init_, chassis_, slider_, clamp_, prefs_, request_, save_)。
+ * メソッド名のプレフィクスでカテゴリを表現 (init_, chassis_, slider_, clamp_, prefs_)。
+ *
+ * M-3 でシートからの流し込み（request_）と保存（save_）のテストは外した。
+ * 受け皿がシート（GARAGE）に置き換わるので、Phase 3 の G-5 で入れ直す。
  */
 class CalcViewModelTest {
 
@@ -41,8 +35,6 @@ class CalcViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val chassisRepository = FakeChassisRepository()
-    private val setupRepository = FakeSetupRepository()
-    private val historyRepository = FakeCalculationHistoryRepository()
 
     // ----- init_ -----
 
@@ -252,173 +244,17 @@ class CalcViewModelTest {
         assertTrue("基準を変えたのにバーが動かない", vm.uiState.value.result!!.balanceIndicatorPct != before)
     }
 
-    // ----- request_: SETUPS からの流し込み（U-3） -----
-
-    @Test
-    fun `request_ルート引数のセッティングが前回値より優先される`() = runTest {
-        val stored = savedSetup(chassisId = "tamiya_ta08", pinion = 28, spur = 92)
-        setupRepository.restoreAll(listOf(stored))
-        val vm = viewModel(
-            prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02", lastPinion = 20),
-            setupId = setupRepository.stored.single().id
-        )
-        advanceUntilIdle()
-
-        with(vm.uiState.value) {
-            assertEquals("tamiya_ta08", selectedChassis?.chassis?.id)
-            assertEquals(28, pinion)
-            assertEquals(92, spur)
-        }
-    }
-
-    @Test
-    fun `request_流し込んだ値は前回値としても永続化される`() = runTest {
-        // プロセス death 後にランチャーから開き直しても、流し込んだ状態が残るように。
-        setupRepository.restoreAll(listOf(savedSetup(chassisId = "tamiya_ta08", pinion = 28, spur = 92)))
-        val prefs = FakePreferencesRepository()
-        val vm = viewModel(
-            preferencesRepository = prefs,
-            setupId = setupRepository.stored.single().id
-        )
-        advanceUntilIdle()
-
-        assertEquals("tamiya_ta08", vm.uiState.value.selectedChassis?.chassis?.id)
-        assertEquals("tamiya_ta08", prefs.current.lastSelectedChassisId)
-        assertEquals(28, prefs.current.lastPinion)
-    }
-
-    @Test
-    fun `request_プロセス death 後に作り直しても同じ値が復元される`() = runTest {
-        // ルート引数はバックスタックに載るので、ViewModel を作り直しても残る
-        // （旧 CalcRequestBus は再生成時に空だった）。
-        setupRepository.restoreAll(listOf(savedSetup(chassisId = "tamiya_ta08", pinion = 28, spur = 92)))
-        val setupId = setupRepository.stored.single().id
-        viewModel(setupId = setupId)
-        advanceUntilIdle()
-
-        val recreated = viewModel(setupId = setupId)
-        advanceUntilIdle()
-
-        assertEquals("tamiya_ta08", recreated.uiState.value.selectedChassis?.chassis?.id)
-        assertEquals(28, recreated.uiState.value.pinion)
-    }
-
-    @Test
-    fun `request_範囲外の値を持つ古いセッティングを流し込んでも落ちない`() = runTest {
-        setupRepository.restoreAll(listOf(savedSetup(chassisId = "tamiya_tt02", pinion = 5, spur = 999)))
-        val vm = viewModel(setupId = setupRepository.stored.single().id)
-        advanceUntilIdle()
-
-        assertEquals(GearCalculationInput.MIN_PINION, vm.uiState.value.pinion)
-        assertEquals(GearCalculationInput.MAX_SPUR, vm.uiState.value.spur)
-    }
-
-    @Test
-    fun `request_削除済みIDを指定されても前回値で動く`() = runTest {
-        // 詳細画面で削除 → 戻る → 同じ引数で復元、のような経路。
-        val vm = viewModel(
-            prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02", lastPinion = 22),
-            setupId = 999L
-        )
-        advanceUntilIdle()
-
-        assertEquals("tamiya_tt02", vm.uiState.value.selectedChassis?.chassis?.id)
-        assertEquals(22, vm.uiState.value.pinion)
-    }
-
-    // ----- save_ -----
-
-    @Test
-    fun `save_シャーシ未選択では保存ダイアログを開かない`() = runTest {
-        val vm = viewModel(prefs = UserPreferences(lastSelectedChassisId = null))
-        advanceUntilIdle()
-
-        vm.onSaveClick()
-
-        assertNull(vm.uiState.value.saveDialog)
-    }
-
-    @Test
-    fun `save_名前を入れて確定すると保存されダイアログが閉じる`() = runTest {
-        val vm = viewModel(prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02"))
-        advanceUntilIdle()
-
-        vm.onSaveClick()
-        vm.onSaveDialogNameChange("Rd1")
-        vm.onSaveDialogConfirm()
-        advanceUntilIdle()
-
-        assertNull(vm.uiState.value.saveDialog)
-        // メッセージは文字列ではなくリソース ID + 引数で持つ（S-11）。
-        // 文言を直したときにテストが落ちない
-        assertEquals(
-            UiText.Res(R.string.calc_saved, listOf("Rd1")),
-            vm.uiState.value.savedMessage
-        )
-        assertEquals("Rd1", setupRepository.stored.single().name)
-    }
-
-    @Test
-    fun `save_同名があるとダイアログにエラーが出て開いたままになる`() = runTest {
-        val vm = viewModel(prefs = UserPreferences(lastSelectedChassisId = "tamiya_tt02"))
-        advanceUntilIdle()
-        vm.onSaveClick()
-        vm.onSaveDialogNameChange("Rd1")
-        vm.onSaveDialogConfirm()
-        advanceUntilIdle()
-
-        vm.onSaveClick()
-        vm.onSaveDialogNameChange("Rd1")
-        vm.onSaveDialogConfirm()
-        advanceUntilIdle()
-
-        val dialog = vm.uiState.value.saveDialog
-        assertNotNull("エラー時はダイアログを閉じてはいけない", dialog)
-        assertEquals(
-            UiText.Res(R.string.calc_save_error_duplicate_name),
-            dialog?.errorMessage
-        )
-        assertTrue("多重タップ防止の isSaving が戻っていない", dialog?.isSaving == false)
-        assertEquals(1, setupRepository.stored.size)
-    }
-
     // ----- ヘルパー -----
 
-    /**
-     * @param setupId ルート引数 [Calc.setupId] に載せる値。null = 素のスクラッチパッド。
-     *   `SavedStateHandle` は実機では NavHost が詰めるので、ここでは同じキーを手で置く。
-     */
     private fun viewModel(
         chassisRepository: FakeChassisRepository = this.chassisRepository,
         preferencesRepository: FakePreferencesRepository = FakePreferencesRepository(),
-        prefs: UserPreferences? = null,
-        setupId: Long? = null
+        prefs: UserPreferences? = null
     ): CalcViewModel {
         val preferences = prefs?.let { FakePreferencesRepository(it) } ?: preferencesRepository
         return CalcViewModel(
-            savedStateHandle = SavedStateHandle(mapOf("setupId" to setupId)),
             chassisRepository = chassisRepository,
-            preferencesRepository = preferences,
-            setupRepository = setupRepository,
-            saveSetupUseCase = SaveSetupUseCase(setupRepository, historyRepository)
+            preferencesRepository = preferences
         )
     }
-
-    private fun savedSetup(
-        chassisId: String,
-        pinion: Int,
-        spur: Int
-    ) = SavedSetup(
-        id = 0,
-        name = "Rd1",
-        chassisId = chassisId,
-        pinion = pinion,
-        spur = spur,
-        internalRatioSnapshot = 2.6,
-        kv = 6500,
-        cells = 2,
-        tireMm = 63,
-        createdAt = 0L,
-        updatedAt = 0L
-    )
 }

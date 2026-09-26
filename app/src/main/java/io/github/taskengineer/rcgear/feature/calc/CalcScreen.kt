@@ -16,18 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -47,13 +43,11 @@ import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.component.MetricsGrid
 import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
 import io.github.taskengineer.rcgear.core.designsystem.component.RcSlider
-import io.github.taskengineer.rcgear.core.ui.asString
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.feature.calc.component.BalanceBar
 import io.github.taskengineer.rcgear.feature.calc.component.ChassisSelectBottomSheet
 import io.github.taskengineer.rcgear.feature.calc.component.ChassisSelectorCard
 import io.github.taskengineer.rcgear.feature.calc.component.GearDiagram
-import io.github.taskengineer.rcgear.feature.calc.component.SaveSetupDialog
 import io.github.taskengineer.rcgear.feature.calc.component.SpeedHud
 import io.github.taskengineer.rcgear.feature.calc.component.gearMetrics
 import kotlinx.coroutines.Dispatchers
@@ -88,15 +82,8 @@ fun CalcScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // 保存成功メッセージをスナックバーで表示する（1回だけ）。
-    // 文字列化は合成中に済ませる（showSnackbar は Composable の外で走るため）
-    val savedMessage = state.savedMessage?.asString()
-    LaunchedEffect(savedMessage) {
-        savedMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.onSavedMessageShown()
-        }
-    }
+    // スナックバーに出すのは画像書き出しの結果だけ。
+    // セッティングの保存は M-3 でシート（GARAGE、Phase 3）に移した
 
     // ---- 画像エクスポート（Step 12） ----
     // 結果エリアの描画内容を記録する GraphicsLayer。
@@ -194,11 +181,6 @@ fun CalcScreen(
                         contentDescription = stringResource(R.string.calc_export_image)
                     )
                 }
-                ExtendedFloatingActionButton(
-                    onClick = viewModel::onSaveClick,
-                    icon = { Icon(Icons.Filled.Save, contentDescription = null) },
-                    text = { Text(stringResource(R.string.action_save)) }
-                )
             }
         }
 
@@ -216,15 +198,6 @@ fun CalcScreen(
             selectedChassisId = state.selectedChassis?.chassis?.id,
             onChassisSelected = viewModel::onChassisSelected,
             onDismiss = viewModel::onChassisSheetDismiss
-        )
-    }
-
-    state.saveDialog?.let { dialog ->
-        SaveSetupDialog(
-            state = dialog,
-            onNameChange = viewModel::onSaveDialogNameChange,
-            onConfirm = viewModel::onSaveDialogConfirm,
-            onDismiss = viewModel::onSaveDialogDismiss
         )
     }
 }

@@ -1,22 +1,14 @@
 package io.github.taskengineer.rcgear.feature.calc
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.taskengineer.rcgear.R
-import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.domain.calculator.GearCalculator
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.Maker
-import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
-import io.github.taskengineer.rcgear.domain.repository.SetupRepository
-import io.github.taskengineer.rcgear.domain.usecase.SaveSetupUseCase
-import io.github.taskengineer.rcgear.navigation.Calc
-import io.github.taskengineer.rcgear.navigation.calcRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,28 +24,18 @@ import javax.inject.Inject
  * - シャーシDB（上書き合成済み）とユーザー設定の購読
  * - スライダー入力の状態管理と GearCalculator による再計算
  * - 前回終了時の状態復元（DataStore）と保存
- * - SETUPS からの「流し込み」要求（ルート引数 [Calc.setupId]）の反映
- * - セッティング保存ダイアログのハンドリング
+ *
+ * シートからの「流し込み」（ルート引数）と保存は M-3 で一旦外した。
+ * 受け皿だった SETUPS がシート（GARAGE）に置き換わるため、Phase 3 の G-5 で
+ * `Calc(sheetId)` として入れ直す。
  *
  * 計算は純粋関数で 16ms を大きく下回るため、debounce せず入力のたびに同期実行する（PLAN 9.2）。
  */
 @HiltViewModel
 class CalcViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
     private val chassisRepository: ChassisRepository,
-    private val preferencesRepository: PreferencesRepository,
-    private val setupRepository: SetupRepository,
-    private val saveSetupUseCase: SaveSetupUseCase
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
-
-    /**
-     * 流し込み対象のセッティング ID（U-3 / DEBT-6）。null = 素のスクラッチパッド。
-     *
-     * アプリスコープの可変シングルトン（旧 CalcRequestBus）ではなくルート引数で受け取る。
-     * バックスタックに載るのでプロセス death 後の復元でも同じ値が入り、
-     * 「設定（前回値）」と「コマンド（流し込み要求）」が混ざらない。
-     */
-    private val requestedSetupId: Long? = savedStateHandle.calcRoute().setupId
 
     private val _uiState = MutableStateFlow(CalcUiState())
     val uiState: StateFlow<CalcUiState> = _uiState.asStateFlow()
@@ -63,14 +45,10 @@ class CalcViewModel @Inject constructor(
             // 1. 初期値を決めてから DB 購読を始める。
             //    こうすることで「デフォルト値が一瞬見えてから前回値に変わる」チラつきを防ぐ。
             val prefs = preferencesRepository.userPreferences.first()
-            //    流し込み要求があればそれを、無ければ前回終了時の値を初期値にする。
-            //    要求元（SETUPS）の画面は既に消えている可能性があるので、ここで自分で読み直す。
-            val requested = requestedSetupId?.let { setupRepository.getById(it) }
-            setState { it.withInitialValues(prefs, requested) }
-            val initialChassisId = requested?.chassisId ?: prefs.lastSelectedChassisId
+            setState { it.withInitialValues(prefs) }
+            val initialChassisId = prefs.lastSelectedChassisId
 
             // 2. シャーシDBを購読。上書きの変更（DB画面での編集）にもリアルタイム追従する。
-            var isFirstEmission = true
             chassisRepository.getAllMakers().collect { makers ->
                 setState { state ->
                     // 既に選択済みならそのIDを、初回なら 1. で決めたIDを解決する
@@ -80,13 +58,6 @@ class CalcViewModel @Inject constructor(
                         makers = makers,
                         selectedChassis = targetId?.let { id -> findChassis(makers, id) }
                     )
-                }
-                if (isFirstEmission) {
-                    isFirstEmission = false
-                    // 流し込んだ値は「前回値」としても残す（ランチャーから開き直したとき用）。
-                    // シャーシを解決する前に書くと chassisId を null で上書きしてしまうため、
-                    // 最初の emission を待ってから書く。
-                    if (requested != null) persistLastCalcState()
                 }
             }
         }
@@ -123,18 +94,15 @@ class CalcViewModel @Inject constructor(
     }
 
     /**
-     * 初期値（流し込み要求 > 前回終了時の値）を載せた状態を返す。
+     * 前回終了時の値を載せた状態を返す。
      * 範囲外の値は [recalculate] 側でクランプされる（REF-1）。
      */
-    private fun CalcUiState.withInitialValues(
-        prefs: UserPreferences,
-        requested: SavedSetup?
-    ) = copy(
-        pinion = requested?.pinion ?: prefs.lastPinion,
-        spur = requested?.spur ?: prefs.lastSpur,
-        kv = requested?.kv ?: prefs.lastKv,
-        cells = requested?.cells ?: prefs.lastCells,
-        tireMm = requested?.tireMm ?: prefs.lastTireMm,
+    private fun CalcUiState.withInitialValues(prefs: UserPreferences) = copy(
+        pinion = prefs.lastPinion,
+        spur = prefs.lastSpur,
+        kv = prefs.lastKv,
+        cells = prefs.lastCells,
+        tireMm = prefs.lastTireMm,
         showMphAlongside = prefs.showMphAlongside,
         animationEnabled = prefs.animationEnabled,
         balanceFdr = prefs.balanceFdr
@@ -182,80 +150,14 @@ class CalcViewModel @Inject constructor(
         persistLastCalcState()
     }
 
-    // ----- 保存ダイアログ -----
-
-    fun onSaveClick() {
-        // シャーシ未選択では保存できない（UI 側でもボタンを無効化している）
-        if (_uiState.value.selectedChassis == null) return
-        _uiState.update { it.copy(saveDialog = SaveDialogState()) }
-    }
-
-    fun onSaveDialogNameChange(name: String) {
-        _uiState.update { state ->
-            state.copy(saveDialog = state.saveDialog?.copy(name = name, errorMessage = null))
-        }
-    }
-
-    fun onSaveDialogDismiss() {
-        _uiState.update { it.copy(saveDialog = null) }
-    }
-
-    fun onSaveDialogConfirm() {
-        val state = _uiState.value
-        val dialog = state.saveDialog ?: return
-        val selected = state.selectedChassis ?: return
-        val result = state.result ?: return
-        if (dialog.isSaving) return
-
-        _uiState.update { it.copy(saveDialog = dialog.copy(isSaving = true)) }
-
-        viewModelScope.launch {
-            val input = state.toCalculationInput(selected.chassis.internalRatio)
-            when (saveSetupUseCase(dialog.name, selected.chassis.id, input, result)) {
-                is SaveSetupUseCase.Result.Success -> _uiState.update {
-                    it.copy(
-                        saveDialog = null,
-                        savedMessage = UiText.Res(
-                            R.string.calc_saved,
-                            listOf(dialog.name.trim())
-                        )
-                    )
-                }
-
-                SaveSetupUseCase.Result.BlankName -> _uiState.update {
-                    it.copy(
-                        saveDialog = it.saveDialog?.copy(
-                            isSaving = false,
-                            errorMessage = UiText.Res(R.string.calc_save_error_blank_name)
-                        )
-                    )
-                }
-
-                SaveSetupUseCase.Result.DuplicateName -> _uiState.update {
-                    it.copy(
-                        saveDialog = it.saveDialog?.copy(
-                            isSaving = false,
-                            errorMessage = UiText.Res(R.string.calc_save_error_duplicate_name)
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    /** スナックバー表示後に呼び、メッセージの再表示を防ぐ */
-    fun onSavedMessageShown() {
-        _uiState.update { it.copy(savedMessage = null) }
-    }
-
     // ----- 内部処理 -----
 
     /**
      * シャーシ未選択なら result = null、選択済みなら再計算した状態を返す。
      *
      * 入力値の防御について（REF-1 / BUG-1・BUG-2）:
-     * 状態を変える経路（前回値の復元・シャーシ選択・スライダー・SETUPS からの
-     * 流し込み）はすべてここを通る。`GearCalculationInput` は範囲外で例外を
+     * 状態を変える経路（前回値の復元・シャーシ選択・スライダー）は
+     * すべてここを通る。`GearCalculationInput` は範囲外で例外を
      * 投げるので、**計算の直前に一度だけクランプする**ことで全経路をまとめて守る。
      * クランプ後の値を state に書き戻すため、スライダーの表示と計算結果もズレない。
      */

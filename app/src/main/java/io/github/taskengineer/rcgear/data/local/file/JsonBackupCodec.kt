@@ -5,8 +5,8 @@ import io.github.taskengineer.rcgear.data.local.file.dto.ExportedOverrideDto
 import io.github.taskengineer.rcgear.data.local.file.dto.ExportedSetupDto
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.backup.BackupData
+import io.github.taskengineer.rcgear.domain.backup.LegacySavedSetup
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
-import io.github.taskengineer.rcgear.domain.model.SavedSetup
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -42,7 +42,9 @@ class JsonBackupCodec @Inject constructor() : BackupCodec {
                 // 既定値は「キーが無いファイル = v1」用なので、書き出す版は明示する
                 schemaVersion = ExportDataDto.CURRENT_SCHEMA_VERSION,
                 exportedAt = data.exportedAt,
-                setups = data.setups.map { it.toDto() },
+                // v1 の「保存セッティング」は書き出さない（M-3 でテーブルごと無くなった）。
+                // v2 の書式（cars / sheets）は M-6 で入る
+                setups = emptyList(),
                 overrides = data.overrides.map { it.toDto() }
             )
         )
@@ -63,26 +65,13 @@ class JsonBackupCodec @Inject constructor() : BackupCodec {
         return BackupCodec.DecodeResult.Success(
             BackupData(
                 exportedAt = dto.exportedAt,
-                setups = dto.setups.map { it.toDomain() },
-                overrides = dto.overrides.map { it.toDomain() }
+                overrides = dto.overrides.map { it.toDomain() },
+                legacySetups = dto.setups.map { it.toDomain() }
             )
         )
     }
 
     // ----- ドメイン ⇔ DTO -----
-
-    private fun SavedSetup.toDto(): ExportedSetupDto = ExportedSetupDto(
-        name = name,
-        chassisId = chassisId,
-        pinion = pinion,
-        spur = spur,
-        internalRatioSnapshot = internalRatioSnapshot,
-        kv = kv,
-        cells = cells,
-        tireMm = tireMm,
-        createdAt = createdAt,
-        updatedAt = updatedAt
-    )
 
     private fun ChassisOverride.toDto(): ExportedOverrideDto = ExportedOverrideDto(
         chassisId = chassisId,
@@ -93,7 +82,7 @@ class JsonBackupCodec @Inject constructor() : BackupCodec {
     )
 
     /** id は端末固有なので JSON には無い。0 = 未採番として復元する */
-    private fun ExportedSetupDto.toDomain(): SavedSetup = SavedSetup(
+    private fun ExportedSetupDto.toDomain(): LegacySavedSetup = LegacySavedSetup(
         id = 0,
         name = name,
         chassisId = chassisId,

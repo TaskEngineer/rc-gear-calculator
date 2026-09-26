@@ -5,17 +5,13 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.github.taskengineer.rcgear.data.local.file.JsonBackupCodec
-import io.github.taskengineer.rcgear.data.repository.CalculationHistoryRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.ChassisRepositoryImpl
 import io.github.taskengineer.rcgear.data.repository.PreferencesRepositoryImpl
-import io.github.taskengineer.rcgear.data.repository.SetupRepositoryImpl
 import io.github.taskengineer.rcgear.data.system.SystemTimeProvider
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.common.TimeProvider
-import io.github.taskengineer.rcgear.domain.repository.CalculationHistoryRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
-import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import javax.inject.Singleton
 
 /**
@@ -35,17 +31,7 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindSetupRepository(impl: SetupRepositoryImpl): SetupRepository
-
-    @Binds
-    @Singleton
     abstract fun bindPreferencesRepository(impl: PreferencesRepositoryImpl): PreferencesRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindCalculationHistoryRepository(
-        impl: CalculationHistoryRepositoryImpl
-    ): CalculationHistoryRepository
 
     @Binds
     @Singleton

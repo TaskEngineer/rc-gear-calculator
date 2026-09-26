@@ -1,18 +1,21 @@
 package io.github.taskengineer.rcgear.domain.backup
 
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
-import io.github.taskengineer.rcgear.domain.model.SavedSetup
 
 /**
  * バックアップ 1 ファイル分の中身（REF-2 / S-5）。
  *
- * ワイヤ形式（JSON）とは独立したドメイン表現。`SavedSetup.id` は端末固有なので
- * エンコード時に捨てられ、デコード時は 0（未採番）で埋められる。
+ * ワイヤ形式（JSON）とは独立したドメイン表現。
+ *
+ * [legacySetups] は **v1 ファイルを読んだときだけ**中身が入る。
+ * v1 の「保存セッティング」は M-3 で車 + シートに置き換わったので、
+ * 書き出す側がこれを埋めることはない。v2 の形（cars / sheets / userChassis）への
+ * 変換は M-6 の v1 → v2 インポータで入る。
  */
 data class BackupData(
     val exportedAt: Long,
-    val setups: List<SavedSetup> = emptyList(),
-    val overrides: List<ChassisOverride> = emptyList()
+    val overrides: List<ChassisOverride> = emptyList(),
+    val legacySetups: List<LegacySavedSetup> = emptyList()
 )
 
 /**

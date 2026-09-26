@@ -10,10 +10,8 @@ import io.github.taskengineer.rcgear.core.ui.formatSpeed
 import io.github.taskengineer.rcgear.data.local.file.JsonFileDataSource
 import io.github.taskengineer.rcgear.domain.model.ThemeMode
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
-import io.github.taskengineer.rcgear.domain.repository.CalculationHistoryRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
-import io.github.taskengineer.rcgear.domain.repository.SetupRepository
 import io.github.taskengineer.rcgear.domain.usecase.ExportDataUseCase
 import io.github.taskengineer.rcgear.domain.usecase.ImportDataUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,9 +31,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ConfigViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
-    private val setupRepository: SetupRepository,
     private val chassisRepository: ChassisRepository,
-    private val historyRepository: CalculationHistoryRepository,
     private val exportDataUseCase: ExportDataUseCase,
     private val importDataUseCase: ImportDataUseCase,
     private val jsonFileDataSource: JsonFileDataSource
@@ -160,9 +156,8 @@ class ConfigViewModel @Inject constructor(
 
     fun onDeleteAllConfirm() {
         viewModelScope.launch {
-            setupRepository.deleteAll()
+            // 車 / シートの削除は Repository が入る M-4 で足す
             chassisRepository.resetAllOverrides()
-            historyRepository.deleteAll()
             preferencesRepository.clear()
             _uiState.update {
                 it.copy(
@@ -179,36 +174,31 @@ class ConfigViewModel @Inject constructor(
     /**
      * インポート結果のメッセージを組み立てる（S-11）。
      *
-     * 「取り込み完了: セッティング 3件（同名スキップ 1件）/ 上書き 2件」のように
-     * 入れ子になるので、[UiText] を書式引数に入れて画面側で解決させる。
-     * 件数が 0 の注記は出さない。
+     * 「取り込み完了: 上書き 2件（不明シャーシ 1件）」のように入れ子になるので、
+     * [UiText] を書式引数に入れて画面側で解決させる。件数が 0 の注記は出さない。
      */
     private fun importedMessage(result: ImportDataUseCase.Result.Success): UiText =
         UiText.Res(
             R.string.config_import_done,
             listOf(
-                result.importedSetups,
-                notes(
-                    duplicateName = result.skippedSetups,
-                    invalid = result.invalidSetups
-                ),
                 result.importedOverrides,
                 notes(
                     unknownChassis = result.skippedOverrides,
-                    invalid = result.invalidOverrides
+                    invalid = result.invalidOverrides,
+                    legacyPending = result.pendingLegacySetups
                 )
             )
         )
 
     /** 括弧付きの注記。出すものが無ければ空文字（書式引数に埋めても何も見えない） */
     private fun notes(
-        duplicateName: Int = 0,
         unknownChassis: Int = 0,
-        invalid: Int = 0
+        invalid: Int = 0,
+        legacyPending: Int = 0
     ): UiText {
         val parts = buildList {
-            if (duplicateName > 0) {
-                add(UiText.Res(R.string.config_import_note_duplicate_name, listOf(duplicateName)))
+            if (legacyPending > 0) {
+                add(UiText.Res(R.string.config_import_note_legacy_pending, listOf(legacyPending)))
             }
             if (unknownChassis > 0) {
                 add(UiText.Res(R.string.config_import_note_unknown_chassis, listOf(unknownChassis)))

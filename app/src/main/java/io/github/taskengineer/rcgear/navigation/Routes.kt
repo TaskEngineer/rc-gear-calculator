@@ -2,11 +2,9 @@ package io.github.taskengineer.rcgear.navigation
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Storage
@@ -28,26 +26,20 @@ import kotlin.reflect.KClass
 // ============================================================
 
 /**
- * CALC 画面。
+ * CALC 画面（スクラッチパッド計算機）。
  *
- * @property setupId 流し込む保存セッティングの ID。null = 素のスクラッチパッド（U-3）。
- *   ルート引数はバックスタックに載るのでプロセス death を生き延びる。
+ * M-3 で「保存セッティングの流し込み」（引数 `setupId`）を一旦外した。
+ * 受け皿だった SETUPS がシートに置き換わるため、Phase 3 の G-5 で
+ * `Calc(sheetId: String?)` として入れ直す。その時にルート引数方式（U-3）も戻る。
  */
 @Serializable
-data class Calc(val setupId: Long? = null)
-
-@Serializable
-data object Setups
+data object Calc
 
 @Serializable
 data object Db
 
 @Serializable
 data object Config
-
-/** セッティング詳細画面 */
-@Serializable
-data class SetupDetail(val setupId: Long)
 
 /** シャーシ編集画面 */
 @Serializable
@@ -66,19 +58,15 @@ data class ChassisEdit(val chassisId: String)
 // その危ない対応関係をルート定義と同じファイルに閉じ込めるのが、この関数群の役目。
 // ============================================================
 
-/** CALC 画面のルート引数を復元する。引数なしで開かれた場合は [Calc.setupId] が null */
-fun SavedStateHandle.calcRoute(): Calc = Calc(setupId = get<Long>("setupId"))
-
-/** セッティング詳細画面のルート引数を復元する */
-fun SavedStateHandle.setupDetailRoute(): SetupDetail =
-    SetupDetail(setupId = checkNotNull(get<Long>("setupId")))
-
 /** シャーシ編集画面のルート引数を復元する */
 fun SavedStateHandle.chassisEditRoute(): ChassisEdit =
     ChassisEdit(chassisId = checkNotNull(get<String>("chassisId")))
 
 /**
- * ボトムナビゲーションのトップレベル4タブ（PLAN 5.1）。
+ * ボトムナビゲーションのトップレベルタブ（PLAN 5.1）。
+ *
+ * M-3 で SETUPS を外したので現在は CALC / DB / CONFIG の 3 つ。
+ * Phase 3 の G-1 で GARAGE（車一覧）が先頭に入る。
  *
  * @property route        タブのルート（引数なしの既定インスタンス）
  * @property label        ボトムナビ用ラベル。英大文字 + 等幅フォントで表示する。
@@ -97,19 +85,11 @@ enum class TopLevelDestination(
     val childRoutes: List<KClass<*>> = emptyList()
 ) {
     CALC(
-        route = Calc(),
+        route = Calc,
         label = "CALC",
         titleRes = R.string.tab_title_calc,
         selectedIcon = Icons.Filled.Speed,
         unselectedIcon = Icons.Outlined.Speed
-    ),
-    SETUPS(
-        route = Setups,
-        label = "SETUPS",
-        titleRes = R.string.tab_title_setups,
-        selectedIcon = Icons.Filled.Bookmarks,
-        unselectedIcon = Icons.Outlined.Bookmarks,
-        childRoutes = listOf(SetupDetail::class)
     ),
     DB(
         route = Db,
