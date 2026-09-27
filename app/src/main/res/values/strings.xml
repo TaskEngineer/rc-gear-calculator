@@ -190,6 +190,36 @@
     <!-- 単位記号。T / mm / S は CALC 画面と共有（上の「単位付きの値」ブロック） -->
     <string name="unit_degree">°</string>
     <string name="unit_kv">KV</string>
+    <string name="unit_celsius">℃</string>
+    <string name="unit_percent">%</string>
+    <string name="unit_second">秒</string>
+
+    <!-- 値の表示（G-3）。数値の整形は core/ui/Format.kt、単位の連結はここ -->
+    <string name="sheet_value_with_unit">%1$s%2$s</string>
+    <string name="sheet_value_empty">—</string>
+    <string name="sheet_value_on">ON</string>
+    <string name="sheet_value_off">OFF</string>
+
+    <!-- レジストリに無いキー（新しい版で書かれたデータを読んだとき） -->
+    <string name="sheet_section_unknown">未分類</string>
+    <string name="sheet_section_unknown_hint">このバージョンでは扱えない項目です。値は保持され、エクスポートにも残ります。</string>
+
+    <!-- ===== シート閲覧（G-3） ===== -->
+    <string name="sheet_detail_favorite">お気に入り</string>
+    <string name="sheet_detail_delete">シートを削除</string>
+    <string name="sheet_detail_delete_confirm_title">シートを削除しますか？</string>
+    <string name="sheet_detail_delete_confirm_text">「%1$s」を削除します。取り消せません。</string>
+    <string name="sheet_detail_updated_at">更新 %1$s</string>
+    <string name="sheet_detail_conditions_section">走行条件</string>
+
+    <!-- シートのヘッダ項目（値ではなく「その設定を行った条件」） -->
+    <string name="sheet_field_session_date">走行日</string>
+    <string name="sheet_field_track_name">コース</string>
+    <string name="sheet_field_surface">路面</string>
+    <string name="sheet_field_air_temp">気温</string>
+    <string name="sheet_field_track_temp">路面温度</string>
+    <string name="sheet_field_humidity">湿度</string>
+    <string name="sheet_field_best_lap">ベストラップ</string>
 
     <!-- 項目名（前後で同じ行になるものは 1 つの文言を共有する） -->
     <string name="field_camber">キャンバー</string>

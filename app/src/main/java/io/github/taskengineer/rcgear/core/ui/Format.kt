@@ -32,6 +32,32 @@ fun Double.formatVoltage(): String = String.format(Locale.US, "%.1f", this)
 /** 回転数。整数に丸めて 3 桁区切り（例: 48,100） */
 fun Double.formatRpm(): String = String.format(Locale.US, "%,d", this.roundToLong())
 
+/**
+ * 小数桁を指定して整形する（G-3）。
+ *
+ * 桁数はセッティングシートの項目定義（`NumberFieldDef.decimals`）が持っている。
+ * 「キャンバーは 0.1 刻みだから 1 桁」という判断はレジストリ側にあり、
+ * ここは渡された桁数で書くだけ。
+ */
+fun Double.formatDecimals(decimals: Int): String =
+    String.format(Locale.US, "%.${decimals}f", this)
+
+/**
+ * ラップタイム[ms] を「12.345」/「1:02.345」に整形する（G-3）。
+ *
+ * 1 分未満は分を出さない。ツーリングのラップは十数秒なので、
+ * 常に "0:12.345" と書くと先頭の 0 が読む邪魔になる。
+ */
+fun Int.formatLapTime(): String {
+    val minutes = this / 60_000
+    val seconds = (this % 60_000) / 1000.0
+    return if (minutes > 0) {
+        String.format(Locale.US, "%d:%06.3f", minutes, seconds)
+    } else {
+        String.format(Locale.US, "%.3f", seconds)
+    }
+}
+
 // ----- 日付 -----
 
 /**

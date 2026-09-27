@@ -36,13 +36,12 @@ import io.github.taskengineer.rcgear.core.ui.formatRatio
  *
  * シートは数十枚の規模なので `LazyColumn` にせず [RcDetailScaffold] の
  * 縦スクロール Column にそのまま並べる（scrollable の入れ子は実行時に落ちる）。
- *
- * シートを開く遷移は G-3（閲覧画面）で入る。
  */
 @Composable
 fun CarDetailScreen(
     onNavigateBack: () -> Unit,
     onEditCarClick: (String) -> Unit,
+    onSheetClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CarDetailViewModel = hiltViewModel()
 ) {
@@ -120,6 +119,7 @@ fun CarDetailScreen(
                     stringResource(R.string.car_detail_duplicate_default_name, sheet.name)
                 SheetCard(
                     sheet = sheet,
+                    onClick = { onSheetClick(sheet.id) },
                     onDuplicateClick = { viewModel.onDuplicateClick(sheet.id, duplicateName) }
                 )
             }
@@ -139,9 +139,10 @@ fun CarDetailScreen(
 @Composable
 private fun SheetCard(
     sheet: SheetListItem,
+    onClick: () -> Unit,
     onDuplicateClick: () -> Unit
 ) {
-    RcCard(spacing = 2.dp) {
+    RcCard(onClick = onClick, spacing = 2.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

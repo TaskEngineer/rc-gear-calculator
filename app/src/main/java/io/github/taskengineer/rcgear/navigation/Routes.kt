@@ -60,6 +60,10 @@ data class CarEdit(val carId: String)
 @Serializable
 data class CarDetail(val carId: String)
 
+/** セッティングシートの閲覧画面 */
+@Serializable
+data class SheetDetail(val sheetId: String)
+
 @Serializable
 data object Db
 
@@ -98,6 +102,10 @@ fun SavedStateHandle.carEditRouteOrNull(): CarEdit? =
 fun SavedStateHandle.carDetailRoute(): CarDetail =
     CarDetail(carId = checkNotNull(get<String>("carId")))
 
+/** シート閲覧画面のルート引数を復元する */
+fun SavedStateHandle.sheetDetailRoute(): SheetDetail =
+    SheetDetail(sheetId = checkNotNull(get<String>("sheetId")))
+
 /**
  * ボトムナビゲーションのトップレベルタブ（PLAN 5.1）。
  *
@@ -127,7 +135,12 @@ enum class TopLevelDestination(
         titleRes = R.string.tab_title_garage,
         selectedIcon = Icons.Filled.DirectionsCar,
         unselectedIcon = Icons.Outlined.DirectionsCar,
-        childRoutes = listOf(CarCreate::class, CarEdit::class, CarDetail::class)
+        childRoutes = listOf(
+            CarCreate::class,
+            CarEdit::class,
+            CarDetail::class,
+            SheetDetail::class
+        )
     ),
     CALC(
         route = Calc,
