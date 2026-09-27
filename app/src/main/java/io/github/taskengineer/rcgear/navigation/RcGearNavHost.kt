@@ -13,6 +13,7 @@ import io.github.taskengineer.rcgear.feature.calc.CalcScreen
 import io.github.taskengineer.rcgear.feature.config.ConfigScreen
 import io.github.taskengineer.rcgear.feature.db.ChassisEditScreen
 import io.github.taskengineer.rcgear.feature.db.DbScreen
+import io.github.taskengineer.rcgear.feature.garage.CarDetailScreen
 import io.github.taskengineer.rcgear.feature.garage.CarEditScreen
 import io.github.taskengineer.rcgear.feature.garage.GarageScreen
 
@@ -46,8 +47,7 @@ fun RcGearNavHost(
     ) {
         composable<Garage> {
             GarageScreen(
-                // G-2 で車詳細（シート一覧）に差し替える
-                onCarClick = { carId -> navController.navigate(CarEdit(carId)) },
+                onCarClick = { carId -> navController.navigate(CarDetail(carId)) },
                 onAddCarClick = { navController.navigate(CarCreate) }
             )
         }
@@ -59,6 +59,15 @@ fun RcGearNavHost(
 
         composable<CarEdit> {
             CarEditScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<CarDetail> {
+            // 引数のキー名を知っているのは Routes.kt だけにしたいので、
+            // carId は NavBackStackEntry から読まずに画面（＝その ViewModel）から受け取る
+            CarDetailScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onEditCarClick = { carId -> navController.navigate(CarEdit(carId)) }
+            )
         }
 
         composable<Calc> { CalcScreen() }

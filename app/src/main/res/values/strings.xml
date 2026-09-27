@@ -15,6 +15,7 @@
     <string name="action_save">保存</string>
     <string name="action_saving">保存中...</string>
     <string name="action_delete">削除</string>
+    <string name="action_create">作成</string>
     <string name="action_stepper_decrement">1 段下げる</string>
     <string name="action_stepper_increment">1 段上げる</string>
     <string name="badge_user_edited">編集済</string>
@@ -152,6 +153,24 @@
     <string name="car_edit_delete">この車を削除</string>
     <string name="car_edit_delete_confirm_title">車を削除しますか？</string>
     <string name="car_edit_delete_confirm_text">「%1$s」と、この車のセッティングシートをすべて削除します。取り消せません。</string>
+
+    <!-- ===== 車詳細（シート一覧。G-2） ===== -->
+    <string name="car_detail_edit_car">車を編集</string>
+    <string name="car_detail_chassis_summary">内部減速比 %1$s  /  タイヤ径 %2$dmm</string>
+    <string name="car_detail_sheets_section">セッティングシート (%1$d)</string>
+    <string name="car_detail_new_sheet">新規シート</string>
+    <string name="car_detail_new_sheet_default_name">新しいシート</string>
+    <string name="car_detail_new_sheet_dialog_title">新規シート</string>
+    <string name="car_detail_new_sheet_dialog_text">シャーシの標準値（内部減速比・タイヤ径）と既定値で 1 枚起こします。</string>
+    <string name="car_detail_duplicate">複製</string>
+    <string name="car_detail_duplicate_default_name">%1$s のコピー</string>
+    <string name="car_detail_duplicate_dialog_title">ベースラインから複製</string>
+    <string name="car_detail_duplicate_dialog_text">「%1$s」の値をすべて引き継いだシートを作ります。元のシートはベースライン（変更点の比較相手）になります。</string>
+    <string name="car_detail_sheet_name">シート名</string>
+    <string name="car_detail_error_sheet_name">シート名を入力してください</string>
+    <string name="car_detail_empty">シートがまだありません。「新規シート」で 1 枚起こしてください</string>
+    <string name="car_detail_baseline">ベースライン: %1$s</string>
+    <string name="car_detail_updated_at">更新 %1$s</string>
 
     <!-- ===== セッティングシート（M-1: TouringSetupSchema の文言） =====
       定義（キー・型・範囲）は :core:domain のレジストリにあり、文言だけがここにある。

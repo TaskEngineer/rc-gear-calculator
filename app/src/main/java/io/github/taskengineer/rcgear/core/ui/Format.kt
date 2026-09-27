@@ -1,5 +1,7 @@
 package io.github.taskengineer.rcgear.core.ui
 
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToLong
 
@@ -29,6 +31,19 @@ fun Double.formatVoltage(): String = String.format(Locale.US, "%.1f", this)
 
 /** 回転数。整数に丸めて 3 桁区切り（例: 48,100） */
 fun Double.formatRpm(): String = String.format(Locale.US, "%,d", this.roundToLong())
+
+// ----- 日付 -----
+
+/**
+ * epoch millis を「2026/09/28」に整形する（G-2）。
+ *
+ * **ここだけ [Locale.US] に固定しない。** 小数点と違い、日付は端末のロケール・
+ * タイムゾーンで読むのが自然だから。並びを `yyyy/MM/dd` に固定しているのは、
+ * シート一覧で縦に並んだときに桁が揃うようにするため
+ * （`DateFormat.getDateInstance()` はロケールで桁数が変わる）。
+ */
+fun Long.formatDate(): String =
+    SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(this))
 
 // ----- Float 版 -----
 // Compose のアニメーション（animateFloatAsState）は Float を返すため、
