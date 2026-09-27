@@ -18,6 +18,7 @@
     <string name="action_stepper_decrement">1 段下げる</string>
     <string name="action_stepper_increment">1 段上げる</string>
     <string name="badge_user_edited">編集済</string>
+    <string name="badge_archived">アーカイブ</string>
     <string name="list_separator">・</string>
     <string name="value_unset">未設定</string>
 
@@ -26,6 +27,7 @@
     <string name="io_error_open_input">ファイルを開けませんでした</string>
 
     <!-- ===== タブ ===== -->
+    <string name="tab_title_garage">ガレージ</string>
     <string name="tab_title_calc">計算</string>
     <string name="tab_title_db">シャーシDB</string>
     <string name="tab_title_config">設定</string>
@@ -125,6 +127,31 @@
     <string name="config_import_failed_version">このアプリより新しいバージョンのデータです</string>
     <string name="config_import_failed">読み込みに失敗しました: %1$s</string>
     <string name="config_delete_all_done">全データを削除しました</string>
+
+    <!-- ===== GARAGE（車一覧・車の編集。G-1） ===== -->
+    <string name="garage_filter_active">使用中</string>
+    <string name="garage_filter_archived">アーカイブ</string>
+    <string name="garage_filter_count">%1$s (%2$d)</string>
+    <string name="garage_empty">車がまだありません。右下の + で追加してください</string>
+    <string name="garage_empty_archived">アーカイブした車はありません</string>
+    <string name="garage_add_car">車を追加</string>
+    <!-- シャーシが同梱DBから見つからないとき（ユーザー定義シャーシは F-5 で入る） -->
+    <string name="garage_chassis_unknown">不明なシャーシ（%1$s）</string>
+
+    <string name="car_edit_title_new">車を追加</string>
+    <string name="car_edit_title">車の編集</string>
+    <string name="car_edit_name">車の名前</string>
+    <string name="car_edit_name_hint">同じ車種を複数持つときに区別できる名前（例: TA08 #1）</string>
+    <string name="car_edit_chassis_section">シャーシ</string>
+    <string name="car_edit_chassis_unselected">タップしてシャーシを選ぶ</string>
+    <string name="car_edit_note">備考</string>
+    <string name="car_edit_archive">アーカイブする</string>
+    <string name="car_edit_archive_hint">一覧から隠すだけで、シートは残る</string>
+    <string name="car_edit_error_name">名前を入力してください</string>
+    <string name="car_edit_error_chassis">シャーシを選んでください</string>
+    <string name="car_edit_delete">この車を削除</string>
+    <string name="car_edit_delete_confirm_title">車を削除しますか？</string>
+    <string name="car_edit_delete_confirm_text">「%1$s」と、この車のセッティングシートをすべて削除します。取り消せません。</string>
 
     <!-- ===== セッティングシート（M-1: TouringSetupSchema の文言） =====
       定義（キー・型・範囲）は :core:domain のレジストリにあり、文言だけがここにある。

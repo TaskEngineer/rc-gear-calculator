@@ -2,9 +2,11 @@ package io.github.taskengineer.rcgear.navigation
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Storage
@@ -35,6 +37,25 @@ import kotlin.reflect.KClass
 @Serializable
 data object Calc
 
+/** GARAGE 画面（車一覧）。SETUPS の後継（G-1） */
+@Serializable
+data object Garage
+
+/**
+ * 車の新規作成画面。
+ *
+ * 編集（[CarEdit]）と同じ画面・同じ ViewModel を「引数なし」で開く。
+ * `CarEdit(carId: String? = null)` の 1 ルートにまとめる案は採らなかった:
+ * 型安全ルートの nullable 引数は文字列 "null" の扱いに実装依存の癖があり、
+ * 「新規かどうか」を引数の有無で表すほうが受け取り側（[carEditRouteOrNull]）も素直になる。
+ */
+@Serializable
+data object CarCreate
+
+/** 車の編集画面 */
+@Serializable
+data class CarEdit(val carId: String)
+
 @Serializable
 data object Db
 
@@ -63,10 +84,18 @@ fun SavedStateHandle.chassisEditRoute(): ChassisEdit =
     ChassisEdit(chassisId = checkNotNull(get<String>("chassisId")))
 
 /**
+ * 車編集画面のルート引数を復元する。
+ * [CarCreate]（新規作成）で開いた場合は引数が無いので `null` を返す。
+ */
+fun SavedStateHandle.carEditRouteOrNull(): CarEdit? =
+    get<String>("carId")?.let { CarEdit(carId = it) }
+
+/**
  * ボトムナビゲーションのトップレベルタブ（PLAN 5.1）。
  *
- * M-3 で SETUPS を外したので現在は CALC / DB / CONFIG の 3 つ。
- * Phase 3 の G-1 で GARAGE（車一覧）が先頭に入る。
+ * G-1 で GARAGE（車一覧）が先頭に入り、[GARAGE] [CALC] [DB] [CONFIG] の 4 つになった。
+ * CALC をシートのセクションに格下げしないのは、「車の文脈なしで 10 秒で終わる問い」に
+ * 答える画面であり、一番速い操作を一番遅くしたくないため（ROADMAP Phase 3）。
  *
  * @property route        タブのルート（引数なしの既定インスタンス）
  * @property label        ボトムナビ用ラベル。英大文字 + 等幅フォントで表示する。
@@ -84,6 +113,14 @@ enum class TopLevelDestination(
     val unselectedIcon: ImageVector,
     val childRoutes: List<KClass<*>> = emptyList()
 ) {
+    GARAGE(
+        route = Garage,
+        label = "GARAGE",
+        titleRes = R.string.tab_title_garage,
+        selectedIcon = Icons.Filled.DirectionsCar,
+        unselectedIcon = Icons.Outlined.DirectionsCar,
+        childRoutes = listOf(CarCreate::class, CarEdit::class)
+    ),
     CALC(
         route = Calc,
         label = "CALC",

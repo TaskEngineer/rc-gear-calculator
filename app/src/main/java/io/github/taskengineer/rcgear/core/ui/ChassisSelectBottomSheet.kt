@@ -1,4 +1,4 @@
-package io.github.taskengineer.rcgear.feature.calc.component
+package io.github.taskengineer.rcgear.core.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -18,13 +18,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.taskengineer.rcgear.R
-import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.Maker
 
 /**
  * シャーシ選択ボトムシート（PLAN 5.2）。
  * メーカー見出し + 所属シャーシのリストを縦に並べる（2段階プルダウンの置き換え）。
+ *
+ * CALC 画面（シャーシの選択）と GARAGE の車編集（車のシャーシ指定）で共有する。
+ * G-1 で `feature/calc/component` から `core/ui` へ移した — ドメイン（[Maker] / [Chassis]）を
+ * 知っている部品なので designsystem ではなくこちら。
  *
  * @param makers            表示する全メーカー（上書き合成済み）
  * @param selectedChassisId 現在選択中のシャーシID。ハイライト表示に使う

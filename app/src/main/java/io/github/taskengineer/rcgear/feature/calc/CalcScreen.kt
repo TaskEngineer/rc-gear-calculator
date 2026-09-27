@@ -43,9 +43,9 @@ import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.component.MetricsGrid
 import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
 import io.github.taskengineer.rcgear.core.designsystem.component.RcSlider
+import io.github.taskengineer.rcgear.core.ui.ChassisSelectBottomSheet
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.feature.calc.component.BalanceBar
-import io.github.taskengineer.rcgear.feature.calc.component.ChassisSelectBottomSheet
 import io.github.taskengineer.rcgear.feature.calc.component.ChassisSelectorCard
 import io.github.taskengineer.rcgear.feature.calc.component.GearDiagram
 import io.github.taskengineer.rcgear.feature.calc.component.SpeedHud

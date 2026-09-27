@@ -13,11 +13,13 @@ import io.github.taskengineer.rcgear.feature.calc.CalcScreen
 import io.github.taskengineer.rcgear.feature.config.ConfigScreen
 import io.github.taskengineer.rcgear.feature.db.ChassisEditScreen
 import io.github.taskengineer.rcgear.feature.db.DbScreen
+import io.github.taskengineer.rcgear.feature.garage.CarEditScreen
+import io.github.taskengineer.rcgear.feature.garage.GarageScreen
 
 /**
  * アプリ全体の NavHost。
- * トップレベル 3 画面 + 派生画面（シャーシ編集）。
- * GARAGE（車一覧）とシート系の画面は Phase 3 で入る。
+ * トップレベル 4 画面 + 派生画面（車の新規作成・編集、シャーシ編集）。
+ * シート系の画面は G-2 以降で入る。
  *
  * ルートは型安全（`@Serializable` なクラス）で指定する（S-12）。
  * 引数の型・名前は [Routes.kt] のクラス定義が唯一の宣言で、`navArgument` は要らない。
@@ -42,6 +44,23 @@ fun RcGearNavHost(
         popEnterTransition = { fadeIn(animationSpec = tween(200)) },
         popExitTransition = { fadeOut(animationSpec = tween(150)) }
     ) {
+        composable<Garage> {
+            GarageScreen(
+                // G-2 で車詳細（シート一覧）に差し替える
+                onCarClick = { carId -> navController.navigate(CarEdit(carId)) },
+                onAddCarClick = { navController.navigate(CarCreate) }
+            )
+        }
+
+        // 新規作成と編集は同じ画面。ルート引数の有無で ViewModel が振る舞いを変える
+        composable<CarCreate> {
+            CarEditScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<CarEdit> {
+            CarEditScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
         composable<Calc> { CalcScreen() }
 
         composable<Db> {
