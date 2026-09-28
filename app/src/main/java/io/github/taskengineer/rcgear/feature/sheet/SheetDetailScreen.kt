@@ -2,6 +2,7 @@ package io.github.taskengineer.rcgear.feature.sheet
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
@@ -42,6 +43,7 @@ import io.github.taskengineer.rcgear.feature.sheet.component.UnknownValuesCard
 fun SheetDetailScreen(
     onNavigateBack: () -> Unit,
     onEditSectionClick: (sheetId: String, sectionKey: String) -> Unit,
+    onEditHeaderClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SheetDetailViewModel = hiltViewModel()
 ) {
@@ -54,6 +56,12 @@ fun SheetDetailScreen(
         isLoading = state.isLoading,
         modifier = modifier,
         actions = {
+            IconButton(onClick = { onEditHeaderClick(state.sheetId) }) {
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = stringResource(R.string.sheet_header_edit_title)
+                )
+            }
             IconButton(onClick = viewModel::onFavoriteToggle) {
                 Icon(
                     imageVector = if (state.isFavorite) {
@@ -100,7 +108,11 @@ fun SheetDetailScreen(
             )
         }
 
-        ConditionsCard(conditions = state.conditions, note = state.note)
+        ConditionsCard(
+            conditions = state.conditions,
+            note = state.note,
+            onClick = { onEditHeaderClick(state.sheetId) }
+        )
 
         // ---- 値（セクションごと） ----
         TouringSetupSchema.sections.forEach { section ->
@@ -146,12 +158,25 @@ fun SheetDetailScreen(
 @Composable
 private fun ConditionsCard(
     conditions: SessionConditions,
-    note: String?
+    note: String?,
+    onClick: () -> Unit
 ) {
     val hasAny = conditions != SessionConditions() || !note.isNullOrBlank()
-    if (!hasAny) return
 
-    RcCard(title = stringResource(R.string.sheet_detail_conditions_section), spacing = 4.dp) {
+    RcCard(
+        title = stringResource(R.string.sheet_detail_conditions_section),
+        onClick = onClick,
+        spacing = 4.dp
+    ) {
+        if (!hasAny) {
+            // 走行日もコースも空のうちは、入力の入口だと分かる 1 行だけ出す
+            Text(
+                text = stringResource(R.string.sheet_detail_conditions_empty),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return@RcCard
+        }
         conditions.sessionDate?.let {
             LabeledRow(
                 label = stringResource(R.string.sheet_field_session_date),

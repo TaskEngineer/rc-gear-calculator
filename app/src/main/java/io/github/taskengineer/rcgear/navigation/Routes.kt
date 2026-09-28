@@ -76,6 +76,15 @@ data class SheetDetail(val sheetId: String)
 @Serializable
 data class SheetEdit(val sheetId: String, val sectionKey: String)
 
+/**
+ * シートのヘッダ（名前・走行条件・ベースライン）の編集画面。
+ *
+ * 値（bag）の編集（[SheetEdit]）と分けているのは、ヘッダが
+ * 「その設定を行った条件」でありセクションではないため（`SetupSheet` の KDoc）。
+ */
+@Serializable
+data class SheetHeaderEdit(val sheetId: String)
+
 @Serializable
 data object Db
 
@@ -118,6 +127,10 @@ fun SavedStateHandle.carDetailRoute(): CarDetail =
 fun SavedStateHandle.sheetDetailRoute(): SheetDetail =
     SheetDetail(sheetId = checkNotNull(get<String>("sheetId")))
 
+/** シートのヘッダ編集画面のルート引数を復元する */
+fun SavedStateHandle.sheetHeaderEditRoute(): SheetHeaderEdit =
+    SheetHeaderEdit(sheetId = checkNotNull(get<String>("sheetId")))
+
 /** シート編集画面のルート引数を復元する */
 fun SavedStateHandle.sheetEditRoute(): SheetEdit =
     SheetEdit(
@@ -159,7 +172,8 @@ enum class TopLevelDestination(
             CarEdit::class,
             CarDetail::class,
             SheetDetail::class,
-            SheetEdit::class
+            SheetEdit::class,
+            SheetHeaderEdit::class
         )
     ),
     CALC(

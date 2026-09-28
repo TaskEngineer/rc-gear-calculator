@@ -223,6 +223,20 @@
     <string name="sheet_edit_discard_text">保存していない変更があります。</string>
     <string name="sheet_edit_discard">破棄する</string>
 
+    <!-- シートのヘッダ編集（G-4） -->
+    <string name="sheet_header_edit_title">シートの情報</string>
+    <string name="sheet_header_note">備考</string>
+    <string name="sheet_header_date_clear">走行日を消す</string>
+    <string name="sheet_header_surface_hint">例: アスファルト / カーペット</string>
+    <string name="sheet_header_baseline">ベースライン</string>
+    <string name="sheet_header_baseline_none">なし</string>
+    <string name="sheet_header_baseline_hint">「前回のセット」を指定すると、そこから何を変えたかを比べられます。</string>
+    <string name="sheet_header_error_air_temp">気温は -20〜60℃ で入力してください</string>
+    <string name="sheet_header_error_track_temp">路面温度は -20〜80℃ で入力してください</string>
+    <string name="sheet_header_error_humidity">湿度は 0〜100% で入力してください</string>
+    <string name="sheet_header_error_best_lap">ベストラップは 0.1〜600 秒で入力してください</string>
+    <string name="sheet_detail_conditions_empty">タップして走行日・コース・気温を記録できます</string>
+
     <!-- シートのヘッダ項目（値ではなく「その設定を行った条件」） -->
     <string name="sheet_field_session_date">走行日</string>
     <string name="sheet_field_track_name">コース</string>
