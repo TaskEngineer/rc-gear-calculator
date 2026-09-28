@@ -35,11 +35,13 @@ import io.github.taskengineer.rcgear.feature.sheet.component.UnknownValuesCard
  * セクションはレジストリ（`TouringSetupSchema.sections`）の順に並べるだけで、
  * **項目を足してもこの画面は変わらない**（G-7 の受け入れ条件）。
  *
- * 編集は G-4、CALC 連携は G-5、差分表示は G-6 で入る。
+ * セクションのカードをタップすると、そのセクションの編集画面（G-4）に入る。
+ * CALC 連携は G-5、差分表示は G-6 で入る。
  */
 @Composable
 fun SheetDetailScreen(
     onNavigateBack: () -> Unit,
+    onEditSectionClick: (sheetId: String, sectionKey: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SheetDetailViewModel = hiltViewModel()
 ) {
@@ -105,7 +107,8 @@ fun SheetDetailScreen(
             SheetSectionCard(
                 section = section,
                 values = state.values,
-                traits = state.traits
+                traits = state.traits,
+                onEditClick = { onEditSectionClick(state.sheetId, section.key) }
             )
         }
 

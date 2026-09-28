@@ -64,6 +64,18 @@ data class CarDetail(val carId: String)
 @Serializable
 data class SheetDetail(val sheetId: String)
 
+/**
+ * セッティングシートの値の編集画面。
+ *
+ * **セクション 1 つが 1 画面**（G-4）。全項目を 1 画面に並べると、
+ * 項目が 60 を超えたときに目的の欄まで延々スクロールすることになる。
+ *
+ * @property sectionKey `TouringSetupSchema.sections` のキー。
+ *   レジストリに無いキーが来た場合は画面を開かずに戻る
+ */
+@Serializable
+data class SheetEdit(val sheetId: String, val sectionKey: String)
+
 @Serializable
 data object Db
 
@@ -106,6 +118,13 @@ fun SavedStateHandle.carDetailRoute(): CarDetail =
 fun SavedStateHandle.sheetDetailRoute(): SheetDetail =
     SheetDetail(sheetId = checkNotNull(get<String>("sheetId")))
 
+/** シート編集画面のルート引数を復元する */
+fun SavedStateHandle.sheetEditRoute(): SheetEdit =
+    SheetEdit(
+        sheetId = checkNotNull(get<String>("sheetId")),
+        sectionKey = checkNotNull(get<String>("sectionKey"))
+    )
+
 /**
  * ボトムナビゲーションのトップレベルタブ（PLAN 5.1）。
  *
@@ -139,7 +158,8 @@ enum class TopLevelDestination(
             CarCreate::class,
             CarEdit::class,
             CarDetail::class,
-            SheetDetail::class
+            SheetDetail::class,
+            SheetEdit::class
         )
     ),
     CALC(

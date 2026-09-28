@@ -17,6 +17,7 @@ import io.github.taskengineer.rcgear.feature.garage.CarDetailScreen
 import io.github.taskengineer.rcgear.feature.garage.CarEditScreen
 import io.github.taskengineer.rcgear.feature.garage.GarageScreen
 import io.github.taskengineer.rcgear.feature.sheet.SheetDetailScreen
+import io.github.taskengineer.rcgear.feature.sheet.SheetEditScreen
 
 /**
  * アプリ全体の NavHost。
@@ -73,7 +74,16 @@ fun RcGearNavHost(
         }
 
         composable<SheetDetail> {
-            SheetDetailScreen(onNavigateBack = { navController.popBackStack() })
+            SheetDetailScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onEditSectionClick = { sheetId, sectionKey ->
+                    navController.navigate(SheetEdit(sheetId = sheetId, sectionKey = sectionKey))
+                }
+            )
+        }
+
+        composable<SheetEdit> {
+            SheetEditScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable<Calc> { CalcScreen() }

@@ -38,6 +38,23 @@ fun setupValueText(field: FieldDef?, value: SetupValue?): String {
     }
 }
 
+/**
+ * 編集画面・差分行で使う項目ラベル（G-4）。
+ *
+ * グリッドのセクション（F / C / R）では行ラベルを前後で共有している
+ * （列見出しが別に出るため）。列見出しの無い縦並びで使うときは
+ * 「キャンバー（フロント）」のように列名を添えないと、どちらの値か分からない。
+ */
+@Composable
+fun fieldEditorLabel(field: FieldDef): String {
+    val label = stringResource(field.labelRes)
+    val columnKey = field.key.substringBefore('.', missingDelimiterValue = "")
+    if (columnKey.isEmpty()) return label
+    val columnRes = SetupFieldLabels.columnLabelRes(columnKey)
+    if (columnRes == SetupFieldLabels.NO_LABEL) return label
+    return stringResource(R.string.sheet_field_with_column, label, stringResource(columnRes))
+}
+
 /** 数値なら「値 + 単位」、そうでなければ null */
 @Composable
 private fun numberText(field: FieldDef?, value: SetupValue): String? {

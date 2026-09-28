@@ -31,6 +31,9 @@ import kotlinx.coroutines.flow.Flow
  *
  * @param events ViewModel が流す画面イベント。[ScreenEvent.NavigateBack] を受けると戻る
  * @param isLoading true の間はスピナーを出し、[content] を組まない
+ * @param onBackClick 戻る矢印を押されたときの処理。既定は [onNavigateBack] と同じ。
+ *   **未保存の確認を挟む画面（G-4）だけ差し替える。** 分けていないと
+ *   「確認を出す」処理がイベント側にも使われ、戻るたびに確認が出て画面から出られなくなる
  */
 @Composable
 fun RcDetailScaffold(
@@ -39,6 +42,7 @@ fun RcDetailScaffold(
     events: Flow<ScreenEvent>,
     isLoading: Boolean,
     modifier: Modifier = Modifier,
+    onBackClick: () -> Unit = onNavigateBack,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -49,7 +53,7 @@ fun RcDetailScaffold(
         topBar = {
             RcTopAppBar(
                 title = title,
-                onNavigateBack = onNavigateBack,
+                onNavigateBack = onBackClick,
                 actions = actions
             )
         }

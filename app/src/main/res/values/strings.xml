@@ -212,6 +212,17 @@
     <string name="sheet_detail_updated_at">更新 %1$s</string>
     <string name="sheet_detail_conditions_section">走行条件</string>
 
+    <!-- ===== シート編集（G-4） ===== -->
+    <string name="sheet_field_with_column">%1$s（%2$s）</string>
+    <string name="sheet_edit_error_number">数値で入力してください</string>
+    <string name="sheet_edit_error_range">%1$s〜%2$s の範囲で入力してください</string>
+    <string name="sheet_edit_error_too_long">%1$d 文字以内で入力してください</string>
+    <string name="sheet_edit_error_choice">選択肢から選び直してください</string>
+    <string name="sheet_edit_save_blocked">入力にエラーがあるため保存できません</string>
+    <string name="sheet_edit_discard_title">編集を破棄しますか？</string>
+    <string name="sheet_edit_discard_text">保存していない変更があります。</string>
+    <string name="sheet_edit_discard">破棄する</string>
+
     <!-- シートのヘッダ項目（値ではなく「その設定を行った条件」） -->
     <string name="sheet_field_session_date">走行日</string>
     <string name="sheet_field_track_name">コース</string>

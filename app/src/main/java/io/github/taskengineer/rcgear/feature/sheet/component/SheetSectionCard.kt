@@ -36,13 +36,16 @@ import io.github.taskengineer.rcgear.feature.sheet.setupValueText
  *
  * @param traits シャーシの素性。出さない項目（センターデフの無い車のデフオイル等）を落とす。
  *   不明なら出す（`ChassisTraits.satisfies`）
+ * @param onEditClick カード全体をタップしたときの処理（G-4 のセクション編集）。
+ *   null なら読み取り専用
  */
 @Composable
 fun SheetSectionCard(
     section: SectionDef,
     values: SetupValues,
     traits: ChassisTraits,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onEditClick: (() -> Unit)? = null
 ) {
     val visibleKeys = section.visibleFields(traits).map { it.key }.toSet()
     if (visibleKeys.isEmpty()) return
@@ -50,6 +53,7 @@ fun SheetSectionCard(
     RcCard(
         title = stringResource(section.labelRes),
         modifier = modifier,
+        onClick = onEditClick,
         spacing = 4.dp
     ) {
         val columns = section.columns
