@@ -45,6 +45,8 @@
     <string name="metric_fdr">最終減速比 FDR</string>
     <string name="metric_motor_rpm">モーターRPM</string>
     <string name="metric_wheel_rpm">ホイールRPM</string>
+    <!-- ロールアウト（F-1）: モーター 1 回転で進む距離 -->
+    <string name="metric_rollout">ロールアウト</string>
     <string name="metric_voltage">電圧</string>
 
     <!-- 単位付きの値。数値の整形は core/ui/Format.kt、単位の連結はここ -->

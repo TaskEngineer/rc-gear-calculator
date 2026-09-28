@@ -15,6 +15,7 @@ import kotlin.math.PI
  *   - 周速[m/min] = π × タイヤ径[m] × ホイールRPM
  *   - km/h 換算: 周速[m/min] × 60 / 1000
  *   - mph 換算定数: 0.621371 (Web 版と同一)
+ *   - ロールアウト[mm] = π × タイヤ径[mm] ÷ FDR（F-1。Web 版には無い）
  */
 object GearCalculator {
 
@@ -63,6 +64,10 @@ object GearCalculator {
         val speedKmh = PI * tireDiameterM * wheelRpm * 60.0 / 1000.0
         val speedMph = speedKmh * KMH_TO_MPH
 
+        // ---- ロールアウト（F-1） ----
+        // モーター 1 回転あたりの進む距離 = タイヤ周長[mm] ÷ FDR
+        val rolloutMm = PI * input.tireMm / fdr
+
         // ---- セッティング傾向 ----
         val balancePct = calculateBalanceIndicator(fdr, balanceFdr)
 
@@ -74,6 +79,7 @@ object GearCalculator {
             wheelRpm = wheelRpm,
             topSpeedKmh = speedKmh,
             topSpeedMph = speedMph,
+            rolloutMm = rolloutMm,
             balanceIndicatorPct = balancePct
         )
     }

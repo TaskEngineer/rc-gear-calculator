@@ -197,6 +197,14 @@ private fun GearResultCard(
                 label = stringResource(R.string.metric_top_speed),
                 value = stringResource(R.string.value_kmh, result.topSpeedKmh.formatSpeed())
             )
+            LabeledRow(
+                label = stringResource(R.string.metric_rollout),
+                value = stringResource(
+                    R.string.sheet_value_with_unit,
+                    result.rolloutMm.formatDecimals(1),
+                    stringResource(R.string.unit_millimeter)
+                )
+            )
         }
         OutlinedButton(
             onClick = onOpenCalcClick,

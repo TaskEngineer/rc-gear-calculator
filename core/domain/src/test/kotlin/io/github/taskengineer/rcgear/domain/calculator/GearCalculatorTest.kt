@@ -13,12 +13,59 @@ import org.junit.Test
  *   - 純粋関数なので入出力のみで検証する。
  *   - 浮動小数点比較は delta（許容誤差）を指定して assertEquals(expected, actual, delta) で行う。
  *   - 代表ケースは Web 版で実際に動作確認された値を用いる。
- *   - メソッド名のプレフィクスでカテゴリを表現 (basic_, rpm_, speed_, balance_, validation_)。
+ *   - メソッド名のプレフィクスでカテゴリを表現 (basic_, rpm_, speed_, rollout_, balance_, validation_)。
  */
 class GearCalculatorTest {
 
     // 浮動小数点比較の許容誤差。表示桁（小数1〜2桁）の範囲では十分。
     private val delta = 1e-6
+
+    // ===============================================================
+    // ロールアウト（F-1）
+    // ===============================================================
+
+    @Test
+    fun `rollout_タイヤ周長を FDR で割った値になる`() {
+        // モーター 1 回転で進む距離 = π × 63mm ÷ 8.2727... ≒ 23.9mm
+        val input = GearCalculationInput(
+            pinion = 22, spur = 70, internalRatio = 2.6,
+            kv = 6500, cells = 2, tireMm = 63
+        )
+
+        val result = GearCalculator.calculate(input)
+
+        assertEquals(
+            Math.PI * 63.0 / result.finalDriveRatio,
+            result.rolloutMm,
+            delta
+        )
+        assertEquals(23.925, result.rolloutMm, 1e-3)
+    }
+
+    @Test
+    fun `rollout_同じ FDR でもタイヤが大きいほど伸びる`() {
+        // FDR だけでは「タイヤが減ったぶん」を表せない。それがロールアウトを出す理由
+        fun rollout(tireMm: Int) = GearCalculator.calculate(
+            GearCalculationInput(
+                pinion = 22, spur = 70, internalRatio = 2.6,
+                kv = 6500, cells = 2, tireMm = tireMm
+            )
+        ).rolloutMm
+
+        assertTrue(rollout(68) > rollout(63))
+    }
+
+    @Test
+    fun `rollout_ピニオンを増やすと伸びる`() {
+        fun rollout(pinion: Int) = GearCalculator.calculate(
+            GearCalculationInput(
+                pinion = pinion, spur = 70, internalRatio = 2.6,
+                kv = 6500, cells = 2, tireMm = 63
+            )
+        ).rolloutMm
+
+        assertTrue(rollout(28) > rollout(22))
+    }
 
     // ===============================================================
     // 基本的なギア比計算

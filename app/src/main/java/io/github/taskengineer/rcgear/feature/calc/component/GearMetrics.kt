@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.component.Metric
+import io.github.taskengineer.rcgear.core.ui.formatDecimals
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.core.ui.formatRpm
 import io.github.taskengineer.rcgear.core.ui.formatVoltage
@@ -40,5 +41,10 @@ fun gearMetrics(result: GearCalculationResult?): List<Metric> = listOf(
     Metric(
         label = stringResource(R.string.metric_wheel_rpm),
         value = result?.wheelRpm?.formatRpm()
+    ),
+    Metric(
+        label = stringResource(R.string.metric_rollout),
+        value = result?.rolloutMm?.formatDecimals(1),
+        unit = stringResource(R.string.unit_millimeter)
     )
 )
