@@ -346,6 +346,58 @@ class CalcViewModelTest {
         )
     }
 
+    // ----- BUG-6: 流し込み元のシートが消えた -----
+
+    @Test
+    fun `feed_流し込み元のシートが消えたらバナーが畳まれる`() = runTest {
+        // CALC はタブなので開いたまま GARAGE / CONFIG からシートを消せる。
+        // バナーが残っていると「存在しないシートに反映」が押せてしまい、
+        // 本物の DB では外部キー違反でアプリごと落ちた（BUG-6）。
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet("car-1", "Rd1", SetupValues.EMPTY)
+        val vm = viewModel(sheetRepository = sheets, sheetId = sheetId)
+        advanceUntilIdle()
+        assertNotNull("前提が崩れている", vm.uiState.value.sheetContext)
+
+        sheets.deleteSheet(sheetId)
+        advanceUntilIdle()
+
+        assertNull("消えたシートのバナーが残っている", vm.uiState.value.sheetContext)
+    }
+
+    @Test
+    fun `feed_全データ削除でもバナーが畳まれる`() = runTest {
+        // CONFIG の「全データ削除」経由。deleteSheet とは別の経路で消える
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet("car-1", "Rd1", SetupValues.EMPTY)
+        val vm = viewModel(sheetRepository = sheets, sheetId = sheetId)
+        advanceUntilIdle()
+
+        sheets.deleteAll()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.sheetContext)
+    }
+
+    @Test
+    fun `apply_シートが消えていれば書かずに理由を出す`() = runTest {
+        // バナーを畳む前に押し込まれた場合の最後の関所。
+        // 本物の Repository は例外ではなく false を返す契約になっている
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet("car-1", "Rd1", SetupValues.EMPTY)
+        val vm = viewModel(sheetRepository = sheets, sheetId = sheetId)
+        advanceUntilIdle()
+        // 購読が畳む前に押された状況を作るため、Flow を回さずに消す
+        sheets.deleteSheet(sheetId)
+
+        vm.onApplyToSheet()
+        advanceUntilIdle()
+
+        assertTrue("消えたシートに書き戻している", sheets.stored.isEmpty())
+        assertNull(vm.uiState.value.sheetContext)
+        assertEquals(UiText.Res(R.string.calc_sheet_gone), vm.uiState.value.message)
+    }
+
     @Test
     fun `apply_シート文脈が無ければ何もしない`() = runTest {
         val sheets = FakeSetupSheetRepository()

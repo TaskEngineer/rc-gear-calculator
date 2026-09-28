@@ -85,6 +85,21 @@ class CalcViewModel @Inject constructor(
             }
         }
 
+        // 流し込み元のシートが消えたら、書き戻し先が無いのでバナーを畳む（BUG-6）。
+        // CALC はタブなので開きっぱなしのまま GARAGE や CONFIG からシートを消せてしまう。
+        // ここで購読していないと「存在しないシートに反映」が押せる状態が残る。
+        if (sheetId != null) {
+            viewModelScope.launch {
+                sheetRepository.observeSheet(sheetId).collect { sheet ->
+                    // 消えたときだけ畳む。ここで文脈を作り直しはしない
+                    // （初期化は init の loadSheetValues が唯一の入り口）
+                    if (sheet == null) {
+                        _uiState.update { it.copy(sheetContext = null) }
+                    }
+                }
+            }
+        }
+
         // 設定変更（CONFIG 画面での mph 表示切替・基準FDR変更）に追従する
         viewModelScope.launch {
             preferencesRepository.userPreferences.collect { prefs ->
@@ -129,23 +144,38 @@ class CalcViewModel @Inject constructor(
      * 内部減速比は書かない（CALC では編集できず、シャーシDB由来の焼き込み値なので）。
      * 変わっていない項目も含めて 5 項目を upsert する — EAV なので 1 項目 1 行の
      * 上書きで済み、差分計算のために元の値を持ち回る必要がない。
+     *
+     * 書き戻し先が消えていた場合（BUG-6）は、押した瞬間に消えた等の取りこぼしなので
+     * 1 項目目で止めて文脈を畳む。押せてしまったこと自体が想定外なので、
+     * 黙って何もせずに終わらせず理由を出す。
      */
     fun onApplyToSheet() {
         val context = _uiState.value.sheetContext ?: return
         val state = _uiState.value
         viewModelScope.launch {
-            sheetRepository.setValue(context.sheetId, "pinion", SetupValue.IntV(state.pinion))
-            sheetRepository.setValue(context.sheetId, "spur", SetupValue.IntV(state.spur))
-            sheetRepository.setValue(context.sheetId, "motorKv", SetupValue.IntV(state.kv))
-            sheetRepository.setValue(context.sheetId, "cells", SetupValue.IntV(state.cells))
-            sheetRepository.setValue(context.sheetId, "tireMm", SetupValue.IntV(state.tireMm))
+            val applied = listOf(
+                "pinion" to SetupValue.IntV(state.pinion),
+                "spur" to SetupValue.IntV(state.spur),
+                "motorKv" to SetupValue.IntV(state.kv),
+                "cells" to SetupValue.IntV(state.cells),
+                "tireMm" to SetupValue.IntV(state.tireMm)
+                // all は最初の false で止まる。消えたシートに残りを書きに行っても無駄なので
+                // ここでは短絡が正しい
+            ).all { (key, value) -> sheetRepository.setValue(context.sheetId, key, value) }
             _uiState.update {
-                it.copy(
-                    message = UiText.Res(
-                        R.string.calc_applied_to_sheet,
-                        listOf(context.sheetName)
+                if (applied) {
+                    it.copy(
+                        message = UiText.Res(
+                            R.string.calc_applied_to_sheet,
+                            listOf(context.sheetName)
+                        )
                     )
-                )
+                } else {
+                    it.copy(
+                        sheetContext = null,
+                        message = UiText.Res(R.string.calc_sheet_gone)
+                    )
+                }
             }
         }
     }

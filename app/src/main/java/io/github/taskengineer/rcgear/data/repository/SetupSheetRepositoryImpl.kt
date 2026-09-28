@@ -28,6 +28,16 @@ import javax.inject.Singleton
  * EAV の行（`num` / `text` の 2 列）と [SetupValue] の相互変換は
  * `:core:domain` の [SetupValueCodec] が持つ。ここはトランザクション境界と
  * 時刻・ID の採番だけを受け持つ。
+ *
+ * ### 消えたシートへの書き込み（BUG-6）
+ * [setValue] / [replaceValues] は **同じトランザクションの中でシートの存在を確かめてから**
+ * 書く。`setup_values.sheetId` には外部キーが張ってあるので、消えたシートに upsert すると
+ * `SQLiteConstraintException` が飛び、捕まえる者が居なければアプリごと落ちる。
+ * 「画面を開いている間にシートが消える」は利用者から見れば異常事態ではないため、
+ * 例外ではなく `false` を返して呼び出し側に判断させる。
+ *
+ * 存在確認と書き込みを 1 トランザクションに入れているので、確認と書き込みの
+ * 隙間で消える余地は無い（Room の `withTransaction` は同じ接続で直列化する）。
  */
 @Singleton
 class SetupSheetRepositoryImpl @Inject constructor(
@@ -89,30 +99,34 @@ class SetupSheetRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun setValue(sheetId: String, fieldKey: String, value: SetupValue?) {
+    override suspend fun setValue(sheetId: String, fieldKey: String, value: SetupValue?): Boolean {
         val now = timeProvider.now()
-        db.withTransaction {
+        return db.withTransaction {
+            val sheet = sheetDao.getById(sheetId) ?: return@withTransaction false
             if (value == null) {
                 // 空欄は「null が入った行」ではなく行ごと削除で表す
                 valueDao.delete(sheetId, fieldKey)
             } else {
-                val stored = SetupValueCodec.encode(value)
-                valueDao.upsert(SetupValueEntity(sheetId, fieldKey, stored.num, stored.text, now))
+                val encoded = SetupValueCodec.encode(value)
+                valueDao.upsert(SetupValueEntity(sheetId, fieldKey, encoded.num, encoded.text, now))
             }
-            touch(sheetId, now)
+            sheetDao.update(sheet.copy(updatedAt = now))
+            true
         }
     }
 
-    override suspend fun replaceValues(sheetId: String, values: SetupValues) {
+    override suspend fun replaceValues(sheetId: String, values: SetupValues): Boolean {
         val now = timeProvider.now()
-        db.withTransaction {
+        return db.withTransaction {
+            val sheet = sheetDao.getById(sheetId) ?: return@withTransaction false
             if (values.isEmpty()) {
                 valueDao.deleteBySheet(sheetId)
             } else {
                 valueDao.upsertAll(values.toEntities(sheetId, now))
                 valueDao.deleteBySheetExcept(sheetId, values.keys.toList())
             }
-            touch(sheetId, now)
+            sheetDao.update(sheet.copy(updatedAt = now))
+            true
         }
     }
 
@@ -135,12 +149,6 @@ class SetupSheetRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteAll() = sheetDao.deleteAll()
-
-    /** 値を書き換えたらシートの更新日時も進める（一覧の並び替えに効く） */
-    private suspend fun touch(sheetId: String, now: Long) {
-        val stored = sheetDao.getById(sheetId) ?: return
-        sheetDao.update(stored.copy(updatedAt = now))
-    }
 
     // ----- 変換 -----
 

@@ -80,6 +80,7 @@
     <string name="calc_sheet_incomplete">シートに入っていなかった項目は前回値のままです</string>
     <string name="calc_apply_to_sheet">このシートに反映</string>
     <string name="calc_applied_to_sheet">「%1$s」のギアを更新しました</string>
+    <string name="calc_sheet_gone">読み込み元のシートが見つかりませんでした</string>
     <string name="calc_image_saved">画像を保存しました</string>
     <string name="calc_image_save_failed">画像の保存に失敗しました: %1$s</string>
 

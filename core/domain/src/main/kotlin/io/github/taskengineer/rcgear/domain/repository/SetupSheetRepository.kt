@@ -45,11 +45,20 @@ interface SetupSheetRepository {
      *
      * EAV を採った理由がこれ。値が `(sheetId, fieldKey)` でアドレスできるので、
      * 束全体を読んで書き戻さずに 1 行の upsert で済む。
+     *
+     * @return 書けたら true。**シートが既に無ければ false**（例外は投げない、BUG-6）。
+     *   画面を開いたまま別の経路でシートが消えることは普通に起こる（CALC のバナー・
+     *   セクション編集画面）。呼び出し側は「消えていた」を例外ではなく
+     *   戻り値で受け取り、画面を畳むなり文言を出すなりする
      */
-    suspend fun setValue(sheetId: String, fieldKey: String, value: SetupValue?)
+    suspend fun setValue(sheetId: String, fieldKey: String, value: SetupValue?): Boolean
 
-    /** 束ごと入れ替える。渡されなかったキーは空欄になる */
-    suspend fun replaceValues(sheetId: String, values: SetupValues)
+    /**
+     * 束ごと入れ替える。渡されなかったキーは空欄になる。
+     *
+     * @return [setValue] と同じ。シートが既に無ければ何も書かずに false
+     */
+    suspend fun replaceValues(sheetId: String, values: SetupValues): Boolean
 
     suspend fun deleteSheet(id: String)
 

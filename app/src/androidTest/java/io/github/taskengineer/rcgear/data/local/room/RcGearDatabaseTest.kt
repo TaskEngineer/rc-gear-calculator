@@ -179,6 +179,24 @@ class RcGearDatabaseTest {
     }
 
     @Test
+    fun `value_消えたシートには値を書けない`() = runTest {
+        // BUG-6 の正体。CALC のバナーが消えたシートを指したまま「反映」を押すと
+        // ここが SQLiteConstraintException になり、捕まえる者が居ないので落ちていた。
+        // 呼び出し側（SetupSheetRepositoryImpl）は書く前に存在を確かめる責任がある
+        prepareSheet()
+        db.setupSheetDao().deleteById(SHEET_ID)
+
+        var thrown: Throwable? = null
+        try {
+            db.setupValueDao().upsert(value(fieldKey = "pinion", num = 22.0))
+        } catch (e: SQLiteConstraintException) {
+            thrown = e
+        }
+
+        assertNotNull("外部キーが効いていない", thrown)
+    }
+
+    @Test
     fun `value_残すキー以外を消せる`() = runTest {
         prepareSheet()
         db.setupValueDao().upsertAll(

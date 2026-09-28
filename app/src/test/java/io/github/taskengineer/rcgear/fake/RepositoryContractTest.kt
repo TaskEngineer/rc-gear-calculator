@@ -156,6 +156,27 @@ class RepositoryContractTest {
     }
 
     @Test
+    fun `消えたシートには値を書けない`() = runTest {
+        // BUG-6。本物は setup_values.sheetId の外部キー違反で
+        // SQLiteConstraintException が飛ぶ。例外ではなく false で受ける契約にした
+        val id = sheetWithGear()
+        sheets.deleteSheet(id)
+
+        assertFalse(sheets.setValue(id, "pinion", SetupValue.IntV(28)))
+        assertFalse(sheets.replaceValues(id, SetupValues.of("spur" to SetupValue.IntV(90))))
+        assertNull("消したはずのシートが生き返っている", sheets.getSheet(id))
+    }
+
+    @Test
+    fun `値を書けたときは true が返る`() = runTest {
+        val id = sheetWithGear()
+
+        assertTrue(sheets.setValue(id, "pinion", SetupValue.IntV(28)))
+        assertTrue(sheets.setValue(id, "pinion", null))
+        assertTrue(sheets.replaceValues(id, SetupValues.of("spur" to SetupValue.IntV(90))))
+    }
+
+    @Test
     fun `未知キーも保存され読み戻せる`() = runTest {
         // スキーマを安全に進化させる担保。将来の項目が入ったデータを読んでも消えない
         val carId = cars.createCar("1号車", "tamiya_tt02")

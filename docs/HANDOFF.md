@@ -1,8 +1,9 @@
 # 引き継ぎ書（HANDOFF）— RcGear Android
 
 > **Status**: MVP 完了 + **セッティングシート化 Phase 0 / 1 / 2 / 3 完了**（Phase 3 = UI 構築）。
-> 次は Phase 4（ROADMAP 参照）。**実機確認は未実施**（§7.1）。
-> **Last Updated**: 2026-09-28
+> **実機確認と instrumented テストは 2026-09-28 に実施済み**（§7.1）。
+> そこで出た **BUG-6（クラッシュ）は同日に修正済み**。残りは BUG-7（低）と UI の粗さ 4 件（`ROADMAP.md` Phase 3.5）。
+> **Last Updated**: 2026-09-28（実機確認 + instrumented テストの結果、および BUG-6 の修正を反映）
 > **対象読者**: 次にこのリポジトリを扱う AI エージェントと、その指示を出す本人。
 >
 > 運用ルールは `AGENTS.md`、機能ロードマップは `ROADMAP.md`、当初計画は `PLAN.md`（凍結）。
@@ -23,8 +24,8 @@
 | 共有 UI | `core/designsystem/component/` に 13 部品（全てに `@Preview`）+ `feature/sheet/component/`（`FieldEditor` / `SheetSectionCard`。どちらも `@Preview` 付き）。文言は `strings.xml`（約 330 件） |
 | モジュール | `:app`（Android）＋ `:core:domain`（純 Kotlin JVM） |
 | ビルド | `:app:assembleDebug` / `:app:lintDebug` / `ktlintCheck` 成功（2026-09-26 確認） |
-| 単体テスト | **332 件成功**（`:core:domain` 127 / `:app` 205）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 + Phase 3 の ViewModel 8 本とテキスト整形 |
-| Instrumented / UI テスト | DAO テストを v2 スキーマに更新（15 件）。**Phase 2 / 3 では未実行**（エミュレータでの再実行が必要。手順は §6.1） |
+| 単体テスト | **337 件成功**（`:core:domain` 127 / `:app` 210）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 + Phase 3 の ViewModel 8 本とテキスト整形 + BUG-6 の回帰 5 件 |
+| Instrumented / UI テスト | **24 件、全件成功**（2026-09-28）。DAO テスト 17 件 + `SetupSheetRepositoryImpl` 7 件（BUG-6）。DAO 側はエミュレータ Pixel_8（API 34）と実機 SO-53C（Android 14 / API 34 / 720x1496）の両方で、Repository 側は Pixel_8 で実行。手順は §6.1 |
 | Lint / 静的解析 | **ktlint 導入済み**（`ktlintCheck` 緑）。Android Lint も CI で実行 |
 | CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**2026-09-26 の PR #1 で初回実行、全ステップ緑**（5m14s）。instrumented テストは CI に入っていない（エミュレータが要るため。§6 参照） |
 | リリース署名 | 未設定。`versionCode = 1`、`versionName = 0.1.0` |
@@ -57,6 +58,9 @@ AGP を上げると解消する見込みだが、Gradle と AGP の互換表に�
 
 **BUG-1 〜 BUG-5 はすべて Phase 0 で決着済み**（BUG-4 のみ「誤記だった」という決着）。
 再現手順と原因は、同じ壊れ方を再び作らないための記録として残す。
+
+**BUG-6 / BUG-7 は 2026-09-28 の実機確認（§7.1）で見つかった不具合。**
+BUG-6（クラッシュ）は同日に修正済み。**BUG-7 は未修正**（落ちはしないので優先度は低い）。
 
 ### BUG-1: タイヤ径の上書きが範囲外だと CALC がクラッシュする（重要度: 高）
 
@@ -103,6 +107,67 @@ REF-6 / S-7（b624b8c）は DRY 目的で実施し、`core/ui/Format.kt` に集�
 - `org.gradle.java.home=C:\\Program Files\\Android\\Android Studio\\jbr`。他の環境・CI では即失敗する。
 - 修正方針: この行を削除し、`JAVA_HOME` または Gradle Toolchain（`kotlin { jvmToolchain(21) }` は既にある）に任せる。
   ローカルで必要なら `~/.gradle/gradle.properties` に移す。
+
+### BUG-6: 消えたシートに CALC から「反映」するとクラッシュする（重要度: 高）
+
+**[解消: 2026-09-28。発見と修正は同日]**
+
+- 再現（エミュレータ Pixel_8 API34・実機 SO-53C Android 14 の両方で再現）:
+  1. GARAGE → 車 → シート → 「CALC で調整する」（CALC が `Calc(sheetId)` ルートになる）
+  2. GARAGE に戻り、同じシートを開いてゴミ箱アイコン → 「削除」
+     （CONFIG の「全データを削除」でも同じ）
+  3. CALC タブへ戻ると **消えたシートの「◯◯ から読み込み／このシートに反映」バナーが残っている**
+  4. 「このシートに反映」をタップ → **FATAL EXCEPTION: main / アプリが落ちる**
+
+```
+android.database.sqlite.SQLiteConstraintException: FOREIGN KEY constraint failed (code 787)
+  at SetupValueDao_Impl.upsert(SetupValueDao_Impl.java:101)
+  at SetupSheetRepositoryImpl$setValue$2.invokeSuspend(SetupSheetRepositoryImpl.kt:100)
+```
+
+- 原因: `CalcViewModel` はルート引数 `Calc(sheetId)` から `sheetContext` を **init で 1 回だけ**
+  読み込み、以後 UiState に持ち続ける（`CalcViewModel.kt:66` / `loadSheetValues`）。
+  シート行が消えても誰も無効化しないので、`onApplyToSheet()` が
+  `sheetRepository.setValue(context.sheetId, ...)` を呼び、`setup_values.sheetId` の
+  外部キー（`setup_sheets` への CASCADE）に違反する。Room の例外は握られていないのでそのまま落ちる。
+  同じ状態のまま CALC タブを踏むと、稀に画面が丸ごと空になる（描画が出ない）症状も出る。
+- 修正: 挙げていた 2 案を**両方**入れた。片方だけでは不足だったため。
+  1. **データ層で落ちなくする。** `SetupSheetRepository.setValue` / `replaceValues` の
+     戻り値を `Boolean` にし、`SetupSheetRepositoryImpl` は**書き込みと同じトランザクションの中で**
+     `sheetDao.getById` を引いて、無ければ何も書かずに `false` を返す。
+     存在確認と書き込みが 1 トランザクションなので、確認と書き込みの隙間で消える余地は無い。
+  2. **UI 層でそもそも押させない。** `CalcViewModel` が `observeSheet(sheetId)` を購読し、
+     null が来たら `sheetContext = null` にしてバナーを畳む。押し込まれた場合の最後の関所として
+     `onApplyToSheet()` は `false` を受けたら文脈を畳み、`calc_sheet_gone` を
+     `message` に載せる（AGENTS.md §5「例外を握りつぶさない」）。
+- **なぜ JVM テストで捕まえられなかったか**: `FakeSetupSheetRepository.setValue` が
+  「シートが無ければ黙って return」だったため。本物なら落ちるコードが Fake の上では素通りしていた。
+  Fake を `false` を返す形に直し、`RepositoryContractTest` に契約として固定した
+  （Fake は本物の制約を再現する ＝ AGENTS.md §5。この一件がその実例）。
+- テスト（全て緑）:
+  - `RepositoryContractTest`: 消えたシートには書けない / 書けたら true（2 件）
+  - `CalcViewModelTest`: シート削除でバナーが畳まれる・全データ削除でも畳まれる・
+    消えたシートには書かず理由を出す（3 件）
+  - `SetupSheetRepositoryImplTest`（**新規 androidTest**）: 本物の SQLite に対して 7 件。
+    Fake が緩かったのが原因なので、本物側を直接押さえる場所を作った
+  - `RcGearDatabaseTest`: `value_消えたシートには値を書けない`（外部キーが実在することの確認）
+- 確認: 上記の再現手順 2 経路（シート個別削除 / CONFIG の全データ削除）を
+  修正後の APK でエミュレータ Pixel_8 に対して再演し、**どちらもバナーが消え、落ちない**ことを確認。
+  `adb logcat -b crash` も空。「CALC が丸ごと空になる」症状も併せて消えた。
+
+### BUG-7: シャーシ上書きの編集画面は範囲外を入力させてから弾く（重要度: 低・未修正）
+
+**[未修正 / 2026-09-28 の実機確認で発見]**
+
+- 再現: DB → 任意シャーシ → 内部減速比に `0`、タイヤ径に `200` を入力。
+  入力中はエラーも出ず「保存」も押せる。押した瞬間に初めて
+  「内部減速比は正の数値で入力してください」→（直すと）「タイヤ径は 40〜120mm の整数で入力してください」
+  と 1 件ずつ出る。
+- 影響: BUG-1 の再発には**至らない**（保存は拒否されるので不正値は DB に入らない）。
+  UX だけの問題。`SheetEditScreen` は入力のたびに検証してエラーを出し保存ボタンを無効化するので、
+  こちらだけ挙動が違う。
+- 修正方針: `ChassisEditViewModel` を `SheetEditViewModel` と同じ形（入力のたびに
+  `FieldValidator` を通し、`errors` が空でなければ保存不可）に揃える。
 
 ---
 
@@ -615,11 +680,31 @@ $SDK = "$env:LOCALAPPDATA\Android\Sdk"
 .\gradlew.bat :app:connectedDebugAndroidTest --console=plain
 ```
 
+実機で走らせる場合は AVD を起動せず、USB デバッグを有効にした端末を繋いで同じコマンドを叩く。
+**エミュレータと実機が同時に繋がっていると `more than one device/emulator` で落ちる**ので、
+`ANDROID_SERIAL` でどちらかを名指しする（`adb devices` でシリアルを見る）:
+
+```powershell
+$env:ANDROID_SERIAL = "HQ626507E2"        # 実機。エミュレータなら "emulator-5554"
+.\gradlew.bat :app:connectedDebugAndroidTest --console=plain
+```
+
 - 結果 XML は `app/build/outputs/androidTest-results/connected/debug/`、HTML は `app/build/reports/androidTests/connected/`。
-- **Gradle のコンソール出力は「Finished 6 tests」しか言わず、失敗件数を出さない。**
+- **コンソール出力は端末によって「Finished 16 tests」としか言わず、失敗件数を出さないことがある**
+  （エミュレータでは `Tests 16/16 completed. (0 failed)` まで出たが、実機では出なかった）。
   緑かどうかは終了コードか XML の `failures` / `errors` 属性で確認する。
+- **このタスクは終わったあとに app と androidTest の APK を両方アンインストールする。**
+  続けて手で操作したいときは `adb install -r -t app/build/outputs/apk/debug/app-debug.apk` で入れ直す。
 - AVD が無い場合は Android Studio の Device Manager で作る（API 34 / `Pixel_8` で確認済み）。
   minSdk 26 なので古い API でも動くはずだが未検証。
+- **端末が 2 台繋がっているときは `$env:ANDROID_SERIAL` を必ず指定する。** 指定しないと
+  繋がっている全端末で走り、双方の APK を入れ替えてしまう。
+  ```powershell
+  $env:ANDROID_SERIAL = "emulator-5554"   # adb devices で出る serial
+  ```
+- 2026-09-28 の実績: DAO テストは Pixel_8（API 34）・SO-53C（Android 14 / API 34）とも **16 件全緑**。
+  BUG-6 の修正後は `SetupSheetRepositoryImplTest` 7 件と DAO の 1 件を足して
+  **Pixel_8 で 24 件全緑**（実機は修正前の 16 件までしか回していない）。
 
 ## 7. 動作確認チェックリスト（手動、リリース前）
 
@@ -648,13 +733,53 @@ Phase 3 時点の版。GARAGE / シート系（10〜18）が Phase 3 で入っ�
     エクスポート → 全データ削除 → インポートで自作シャーシごと戻る
 19. 共有: シートの共有アイコンでテキストが飛ぶ。CALC の共有 FAB で画像が飛ぶ
 
-### 7.1 未実施の確認（Phase 2 / 3 から持ち越し）
+### 7.1 実機確認の結果（2026-09-28 実施）
 
-- **実機 / エミュレータでの動作確認そのもの**。Phase 3 は UI を大量に足したが、
-  すべて JVM 単体テストとビルドまでしか確認していない。
-  特に次は runtime にしか出ない失敗モードがある:
-  - 型安全ルートの nullable 引数（`Calc(sheetId)`）と流し込み遷移（§5.6 の 4 / 5 と同じ手順）
-  - `FileProvider` の authority（debug は `.debug` サフィックス付き）と共有インテント
-  - `DatePicker` の日付が一覧の並び順に効くか
-- **instrumented テスト**（`RcGearDatabaseTest` を v2 スキーマに更新済み、15 件）は
-  エミュレータでの再実行が必要。外部キーの CASCADE / SET NULL は JVM テストでは見えない。手順は §6.1
+環境: エミュレータ **Pixel_8 / API 34 / 1080x2400**、実機 **Sony SO-53C（Xperia Ace III）/
+Android 14 / API 34 / 720x1496 @300dpi**。debug ビルド（`0.1.0-debug`）を adb でインストールし、
+§7 のチェックリスト 1〜19 を adb（`input tap` / `screencap`）で一通り操作した。
+
+**instrumented テスト**: `:app:connectedDebugAndroidTest` を両方で実行し、
+**16 件すべて成功**（`app/build/outputs/androidTest-results/connected/debug/` の XML で
+`failures="0" errors="0"` を確認）。外部キーの CASCADE / SET NULL も緑。
+
+**Phase 2 / 3 で「runtime にしか出ない」と挙げていた 3 点はいずれも正常だった**:
+
+- 型安全ルートの nullable 引数（`Calc(sheetId)`）と流し込み遷移 → シートの値が CALC に載り、
+  「このシートに反映」でシートに書き戻る。**内部減速比は書き換わらない**（チェックリスト 17 の通り）
+- `FileProvider` の authority（debug の `.debug` サフィックス）と共有インテント →
+  シートのテキスト共有・CALC の画像共有ともに ACTION_SEND が開く。
+  画像保存（SAF）も 145 KB の PNG が実際に書けて、開くと CALC 画面がそのまま入っている
+- `DatePicker` の日付が一覧の並び順に効くか → 走行日を入れたシートが日付なしのシートより前に出る
+
+**チェックリスト 1〜19 の結果**: 1〜19 すべて通った。ただし次を発見した。
+
+| # | 見つかったもの | 扱い |
+|---|---|---|
+| 17 前後 | 消えたシートに「このシートに反映」でクラッシュ | **BUG-6（高）→ 同日に修正済み** |
+| 3 / 4 | シャーシ上書きの範囲外入力が保存時まで弾かれない（落ちはしない） | **BUG-7（低・未修正）** |
+| 15 | `DatePicker` の文言が英語（"Select date" / "S M T W T F S" / M-D-Y 並び） | 下記 |
+| 5 | ライトテーマの見出し（DISPLAY / DATA）と数値のミント色が白背景で低コントラスト | 下記 |
+| 2 / 19 | CALC の 2 つの FAB が内容に重なる（実機 720px で「ロールアウト」の値と「セッティング傾向」が隠れる） | 下記 |
+| 13 | シート閲覧のツールバーはアイコン 5 個で、720px だとタイトルが 2 行に折れて潰れる | 下記 |
+| 7 | v1 インポートで作られる車の名前がシャーシ id そのまま（`tamiya_tt01_tt01e`） | 仕様。`LegacyBackupConverter` の KDoc に理由あり |
+
+**BUG にしていない 4 件（UI の粗さ。ROADMAP に載せるか判断する）**
+
+1. **`DatePicker` が英語になる**。`res/values/` は日本語を既定にしているが、Material3 の
+   `DatePicker` は **システムロケール** で文言と曜日並びを決めるので、端末が英語だと
+   日本語アプリの中に英語のカレンダーが出る。日本語で固定したいなら
+   `res/values-ja/` を切って既定を英語にするか、`DatePicker` に Locale を渡す。
+2. **ライトテーマのコントラスト**。セクション見出しと数値がダークと同じミント色のまま。
+   白背景では WCAG AA（4.5:1）に届かない。`Color.kt` にライト用のアクセントを足す。
+3. **CALC の FAB が内容に重なる**。スクロール内容の下に FAB 2 個分の padding が無い。
+   実機（720x1496）では「ロールアウト」の値と傾向バーが隠れる。
+4. **シート閲覧のツールバー**。共有 / 比較 / 編集 / お気に入り / 削除 の 5 個が常時出ていて、
+   720px ではタイトルの幅が 120px 程度しか残らない。overflow メニューに畳むのが妥当。
+
+**再現に使った手順はこのファイルの BUG-6 / BUG-7 に書いてある。**
+**BUG-6 は同日（2026-09-28）に修正し、同じ手順で再演して落ちないことを確認済み**（§2 の BUG-6 参照）。
+残る BUG-7 と上の 4 件は `ROADMAP.md` の Phase 3.5 に載せてある。
+
+**instrumented テストは修正後に 24 件へ増え、Pixel_8 で全件成功**
+（DAO 17 件 + `SetupSheetRepositoryImpl` 7 件）。実機 SO-53C で回したのは修正前の DAO 16 件まで。

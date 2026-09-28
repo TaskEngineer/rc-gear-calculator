@@ -17,7 +17,13 @@ import kotlinx.coroutines.flow.map
  * - `setValue(null)` は行ごと削除（＝空欄）。null が入った行は作らない
  * - `replaceValues` は渡されなかったキーを落とす
  * - 値を書き換えるとシートの `updatedAt` が進む
+ * - **消えたシートには書けない**（`false` を返す）。本物は外部キー違反になる
  * - `restoreAll` は id で upsert（冪等）
+ *
+ * 最後のひとつは BUG-6 の直後に足した。以前は「シートが無ければ黙って return」
+ * だったため、本物なら `SQLiteConstraintException` で落ちるコードが
+ * このFake の上では素通りし、CalcViewModel のテストが全緑のままだった。
+ * Fake が緩いと守れるはずのものが守れない、の実例なので消さないこと。
  */
 class FakeSetupSheetRepository(
     initial: List<SetupSheetWithValues> = emptyList()
@@ -65,8 +71,8 @@ class FakeSetupSheetRepository(
         )
     }
 
-    override suspend fun setValue(sheetId: String, fieldKey: String, value: SetupValue?) {
-        val stored = sheets.value[sheetId] ?: return
+    override suspend fun setValue(sheetId: String, fieldKey: String, value: SetupValue?): Boolean {
+        val stored = sheets.value[sheetId] ?: return false
         val newValues = if (value == null) {
             stored.values.without(fieldKey)
         } else {
@@ -76,14 +82,16 @@ class FakeSetupSheetRepository(
             sheet = stored.sheet.copy(updatedAt = now),
             values = newValues
         )
+        return true
     }
 
-    override suspend fun replaceValues(sheetId: String, values: SetupValues) {
-        val stored = sheets.value[sheetId] ?: return
+    override suspend fun replaceValues(sheetId: String, values: SetupValues): Boolean {
+        val stored = sheets.value[sheetId] ?: return false
         sheets.value += sheetId to stored.copy(
             sheet = stored.sheet.copy(updatedAt = now),
             values = values
         )
+        return true
     }
 
     override suspend fun deleteSheet(id: String) {
