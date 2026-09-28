@@ -230,6 +230,19 @@
     <string name="sheet_edit_discard_text">保存していない変更があります。</string>
     <string name="sheet_edit_discard">破棄する</string>
 
+    <!-- ===== シート比較（G-6） ===== -->
+    <string name="sheet_compare_title">比較</string>
+    <string name="sheet_compare_axis_chassis">キット標準</string>
+    <string name="sheet_compare_axis_baseline">ベースライン</string>
+    <string name="sheet_compare_axis_other">他のシート</string>
+    <string name="sheet_compare_this_sheet">このシート</string>
+    <string name="sheet_compare_select_other">比較相手</string>
+    <string name="sheet_compare_include_same">同じ値も表示する</string>
+    <string name="sheet_compare_no_diff">差はありません</string>
+    <string name="sheet_compare_no_baseline">ベースラインが未設定です。シートの情報から「前回のセット」を指定すると、そこからの変更点を出せます。</string>
+    <string name="sheet_compare_no_candidates">同じ車に他のシートがありません</string>
+    <string name="sheet_compare_chassis_note">シャーシDBの内部減速比・タイヤ径と、項目の既定値を「キット標準」として比べています。</string>
+
     <!-- シートのヘッダ編集（G-4） -->
     <string name="sheet_header_edit_title">シートの情報</string>
     <string name="sheet_header_note">備考</string>

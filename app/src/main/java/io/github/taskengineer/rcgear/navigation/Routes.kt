@@ -85,6 +85,15 @@ data class SheetEdit(val sheetId: String, val sectionKey: String)
 @Serializable
 data class SheetHeaderEdit(val sheetId: String)
 
+/**
+ * シートの比較画面（G-6）。3 つの比較軸をタブで切り替える。
+ *
+ * 軸ごとに画面を分けないのは、比べる相手が違うだけで見せ方が同じだから
+ * （`SheetDiff` が 3 軸を 1 つの純粋関数に落としているのと同じ理由）。
+ */
+@Serializable
+data class SheetCompare(val sheetId: String)
+
 @Serializable
 data object Db
 
@@ -129,6 +138,10 @@ fun SavedStateHandle.carDetailRoute(): CarDetail =
 /** シート閲覧画面のルート引数を復元する */
 fun SavedStateHandle.sheetDetailRoute(): SheetDetail =
     SheetDetail(sheetId = checkNotNull(get<String>("sheetId")))
+
+/** シート比較画面のルート引数を復元する */
+fun SavedStateHandle.sheetCompareRoute(): SheetCompare =
+    SheetCompare(sheetId = checkNotNull(get<String>("sheetId")))
 
 /** シートのヘッダ編集画面のルート引数を復元する */
 fun SavedStateHandle.sheetHeaderEditRoute(): SheetHeaderEdit =
@@ -176,7 +189,8 @@ enum class TopLevelDestination(
             CarDetail::class,
             SheetDetail::class,
             SheetEdit::class,
-            SheetHeaderEdit::class
+            SheetHeaderEdit::class,
+            SheetCompare::class
         )
     ),
     CALC(

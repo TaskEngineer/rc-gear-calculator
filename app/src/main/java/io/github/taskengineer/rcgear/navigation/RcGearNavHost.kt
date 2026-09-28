@@ -16,6 +16,7 @@ import io.github.taskengineer.rcgear.feature.db.DbScreen
 import io.github.taskengineer.rcgear.feature.garage.CarDetailScreen
 import io.github.taskengineer.rcgear.feature.garage.CarEditScreen
 import io.github.taskengineer.rcgear.feature.garage.GarageScreen
+import io.github.taskengineer.rcgear.feature.sheet.SheetCompareScreen
 import io.github.taskengineer.rcgear.feature.sheet.SheetDetailScreen
 import io.github.taskengineer.rcgear.feature.sheet.SheetEditScreen
 import io.github.taskengineer.rcgear.feature.sheet.SheetHeaderEditScreen
@@ -81,6 +82,7 @@ fun RcGearNavHost(
                     navController.navigate(SheetEdit(sheetId = sheetId, sectionKey = sectionKey))
                 },
                 onEditHeaderClick = { sheetId -> navController.navigate(SheetHeaderEdit(sheetId)) },
+                onCompareClick = { sheetId -> navController.navigate(SheetCompare(sheetId)) },
                 onLoadToCalcClick = { sheetId ->
                     // 「CALC に流し込む」特殊遷移（U-3 / G-5）:
                     // 値はルート引数で渡し、既存の CALC エントリは inclusive で破棄して置き換える。
@@ -100,6 +102,10 @@ fun RcGearNavHost(
 
         composable<SheetHeaderEdit> {
             SheetHeaderEditScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<SheetCompare> {
+            SheetCompareScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable<Calc> { CalcScreen() }

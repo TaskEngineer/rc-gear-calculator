@@ -2,6 +2,7 @@ package io.github.taskengineer.rcgear.feature.sheet
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
@@ -50,6 +51,7 @@ fun SheetDetailScreen(
     onEditSectionClick: (sheetId: String, sectionKey: String) -> Unit,
     onEditHeaderClick: (String) -> Unit,
     onLoadToCalcClick: (String) -> Unit,
+    onCompareClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SheetDetailViewModel = hiltViewModel()
 ) {
@@ -62,6 +64,12 @@ fun SheetDetailScreen(
         isLoading = state.isLoading,
         modifier = modifier,
         actions = {
+            IconButton(onClick = { onCompareClick(state.sheetId) }) {
+                Icon(
+                    imageVector = Icons.Filled.CompareArrows,
+                    contentDescription = stringResource(R.string.sheet_compare_title)
+                )
+            }
             IconButton(onClick = { onEditHeaderClick(state.sheetId) }) {
                 Icon(
                     imageVector = Icons.Filled.Edit,
