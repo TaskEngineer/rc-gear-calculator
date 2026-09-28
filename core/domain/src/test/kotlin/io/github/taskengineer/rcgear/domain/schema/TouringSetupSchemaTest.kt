@@ -1,7 +1,10 @@
 package io.github.taskengineer.rcgear.domain.schema
 
+import io.github.taskengineer.rcgear.domain.model.ChassisDrive
+import io.github.taskengineer.rcgear.domain.model.ChassisTraits
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -189,6 +192,75 @@ class TouringSetupSchemaTest {
         assertTrue(internalRatio.min <= 1.0)
         assertTrue(internalRatio.max >= 5.0)
         assertEquals(ChassisDefault.INTERNAL_RATIO, internalRatio.defaultFrom)
+    }
+
+    // ----- G-7: 横展開したセクション -----
+
+    @Test
+    fun `セクションが宣言順に並んでいる`() {
+        assertEquals(
+            listOf("gear", "drivetrain", "suspension", "damper", "tire", "esc", "body", "result"),
+            TouringSetupSchema.sections.map { it.key }
+        )
+    }
+
+    @Test
+    fun `全セクションに項目がある`() {
+        for (section in TouringSetupSchema.sections) {
+            assertTrue("${section.key}: 項目が空", section.fields.isNotEmpty())
+        }
+    }
+
+    /**
+     * 「分からないから隠す」をしない（HANDOFF §5.7）。
+     * センターデフの有無が不明なシャーシでは、デフオイル欄を出す。
+     */
+    @Test
+    fun `センターの項目はデフが無い車でだけ消える`() {
+        val noCenterDiff = TouringSetupSchema.DRIVETRAIN
+            .visibleFields(ChassisTraits(hasCenterDiff = false))
+            .map { it.key }
+        assertFalse("center.diffType" in noCenterDiff)
+        assertFalse("center.diffOilCst" in noCenterDiff)
+        assertTrue("前後のデフまで消えている", "front.diffType" in noCenterDiff)
+
+        val unknown = TouringSetupSchema.DRIVETRAIN
+            .visibleFields(ChassisTraits.UNKNOWN)
+            .map { it.key }
+        assertTrue("不明な車で隠してはいけない", "center.diffType" in unknown)
+    }
+
+    @Test
+    fun `ベルトテンションはシャフト車で消える`() {
+        val shaft = TouringSetupSchema.DRIVETRAIN
+            .visibleFields(ChassisTraits(drive = ChassisDrive.SHAFT_4WD))
+            .map { it.key }
+        assertFalse("front.beltTension" in shaft)
+
+        val belt = TouringSetupSchema.DRIVETRAIN
+            .visibleFields(ChassisTraits(drive = ChassisDrive.BELT_4WD))
+            .map { it.key }
+        assertTrue("front.beltTension" in belt)
+    }
+
+    /**
+     * 走行結果の手応えは**値（bag）**に置く。差分（軸 B）で
+     * 「前回はアンダー / 今回はニュートラル」と並べたいため。
+     * ラップタイムだけはヘッダ（`SessionConditions`）にある。
+     */
+    @Test
+    fun `走行結果の手応えはレジストリの項目として存在する`() {
+        for (key in listOf("feelEntry", "feelMid", "feelExit", "gripFeel")) {
+            assertTrue("$key がレジストリに無い", TouringSetupSchema.isKnown(key))
+            assertEquals("result", TouringSetupSchema.sectionOf(key)?.key)
+        }
+    }
+
+    @Test
+    fun `タイヤ径の実測値はギアの tireMm とは別項目`() {
+        // ギアの tireMm は「計算に使う 1 つの値」、tire.* は走行前に測った記録
+        assertEquals("gear", TouringSetupSchema.sectionOf("tireMm")?.key)
+        assertEquals("tire", TouringSetupSchema.sectionOf("front.tireDiaMm")?.key)
     }
 
     private fun assertRange(field: NumberFieldDef, range: IntRange) {

@@ -186,6 +186,11 @@
     <string name="sheet_section_gear">ギア</string>
     <string name="sheet_section_suspension">サスペンション</string>
     <string name="sheet_section_damper">ダンパー</string>
+    <string name="sheet_section_drivetrain">駆動系</string>
+    <string name="sheet_section_tire">タイヤ</string>
+    <string name="sheet_section_esc">モーター / ESC</string>
+    <string name="sheet_section_body">車体</string>
+    <string name="sheet_section_result">走行結果</string>
 
     <!-- 列（F / C / R） -->
     <string name="sheet_column_front">フロント</string>
@@ -195,6 +200,9 @@
     <!-- 単位記号。T / mm / S は CALC 画面と共有（上の「単位付きの値」ブロック） -->
     <string name="unit_degree">°</string>
     <string name="unit_kv">KV</string>
+    <string name="unit_cst">cSt</string>
+    <string name="unit_turn">T</string>
+    <string name="unit_gram">g</string>
     <string name="unit_celsius">℃</string>
     <string name="unit_percent">%</string>
     <string name="unit_second">秒</string>
@@ -281,6 +289,32 @@
     <string name="field_damper_len">ダンパー長</string>
     <string name="field_damper_upper_mount">上側取付位置</string>
 
+    <!-- 項目名: 駆動系 / タイヤ / ESC / 車体 / 走行結果（G-7） -->
+    <string name="field_diff_type">デフ形式</string>
+    <string name="field_diff_oil">デフオイル</string>
+    <string name="field_belt_tension">ベルトテンション</string>
+    <string name="field_tire_brand">タイヤ銘柄</string>
+    <string name="field_tire_compound">コンパウンド</string>
+    <string name="field_tire_insert">インナー</string>
+    <string name="field_tire_additive">添加剤</string>
+    <string name="field_tire_dia">タイヤ径（実測）</string>
+    <string name="field_motor_turn">ターン数</string>
+    <string name="field_motor_brand">モーター銘柄</string>
+    <string name="field_motor_timing">モータータイミング</string>
+    <string name="field_esc_brand">ESC 銘柄</string>
+    <string name="field_esc_boost">ブースト</string>
+    <string name="field_esc_turbo">ターボ</string>
+    <string name="field_esc_punch">パンチ</string>
+    <string name="field_esc_drag_brake">ドラッグブレーキ</string>
+    <string name="field_body_name">ボディ</string>
+    <string name="field_body_wing">ウイング</string>
+    <string name="field_ballast_weight">バラスト重量</string>
+    <string name="field_ballast_position">バラスト位置</string>
+    <string name="field_feel_entry">進入</string>
+    <string name="field_feel_mid">クリップ</string>
+    <string name="field_feel_exit">立ち上がり</string>
+    <string name="field_grip_feel">グリップ感</string>
+
     <!-- 選択肢: ダンパーオイルの単位。wt と cSt は換算しないのでそのまま出す -->
     <string name="choice_damper_oil_unit_wt">wt</string>
     <string name="choice_damper_oil_unit_cst">cSt</string>
@@ -300,4 +334,40 @@
     <string name="choice_damper_mount_pos3">3</string>
     <string name="choice_damper_mount_pos4">4</string>
     <string name="choice_damper_mount_pos5">5（外側）</string>
+
+    <!-- 選択肢: 駆動系（G-7） -->
+    <string name="choice_diff_type_ball">ボール</string>
+    <string name="choice_diff_type_gear">ギア</string>
+    <string name="choice_diff_type_spool">スプール（直結）</string>
+    <string name="choice_diff_type_one_way">ワンウェイ</string>
+    <string name="choice_belt_tension_loose">緩め</string>
+    <string name="choice_belt_tension_normal">標準</string>
+    <string name="choice_belt_tension_tight">張り気味</string>
+
+    <!-- 選択肢: タイヤ（G-7）。銘柄ごとの呼び名ではなく硬さの段階で持つ -->
+    <string name="choice_tire_compound_super_soft">スーパーソフト</string>
+    <string name="choice_tire_compound_soft">ソフト</string>
+    <string name="choice_tire_compound_medium">ミディアム</string>
+    <string name="choice_tire_compound_hard">ハード</string>
+    <string name="choice_tire_insert_soft">ソフト</string>
+    <string name="choice_tire_insert_medium">ミディアム</string>
+    <string name="choice_tire_insert_hard">ハード</string>
+    <string name="choice_tire_insert_moulded">モールド</string>
+
+    <!-- 選択肢: ESC（G-7） -->
+    <string name="choice_esc_punch_soft">ソフト</string>
+    <string name="choice_esc_punch_medium">ミディアム</string>
+    <string name="choice_esc_punch_hard">ハード</string>
+
+    <!-- 選択肢: バラスト位置（G-7）。前 / 中 / 後はグリッドの列名を共有する -->
+    <string name="choice_ballast_position_left">左</string>
+    <string name="choice_ballast_position_right">右</string>
+
+    <!-- 選択肢: 走行結果の手応え（G-7） -->
+    <string name="choice_steer_feel_under">アンダー</string>
+    <string name="choice_steer_feel_neutral">ニュートラル</string>
+    <string name="choice_steer_feel_over">オーバー</string>
+    <string name="choice_grip_feel_low">低い</string>
+    <string name="choice_grip_feel_medium">普通</string>
+    <string name="choice_grip_feel_high">高い</string>
 </resources>

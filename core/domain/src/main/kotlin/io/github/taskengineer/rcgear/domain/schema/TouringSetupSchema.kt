@@ -8,10 +8,11 @@ import io.github.taskengineer.rcgear.domain.model.ChassisTraits
  * ここと `:app` の `strings.xml` の 2 ファイルを足すだけで項目が増える、という状態を保つこと。
  * Composable を書き足さないと項目が増えないなら、レジストリ方式が壊れている合図になる。
  *
- * ### 第 1 スライス
- * 計画（ROADMAP Phase 2 / M-1）に従い、まずは **ギア + 前後ダンパー + 主要サスペンション**
- * だけを定義する。駆動系・タイヤ・ESC・車体・走行結果は Phase 3 の G-7 で横展開する。
- * その時点で UI コードが 1 行も増えないことが、この設計が機能していることの証明になる。
+ * ### 項目の範囲
+ * M-1 の第 1 スライス（ギア + 前後ダンパー + 主要サスペンション）に、
+ * G-7 で駆動系・タイヤ・ESC・車体・走行結果を足した。
+ * **この横展開で Composable は 1 行も増えていない**（足したのはこのファイルと
+ * `:app` の `strings.xml` / `SetupFieldLabels` だけ）。それがレジストリ方式の受け入れ条件だった。
  *
  * ### 範囲値の出どころ
  * ギアセクションの範囲は `GearCalculationInput` の定数（Web 版と同一）と一致させる。
@@ -28,7 +29,7 @@ object TouringSetupSchema {
      * 読み込み側は「知らないキーは捨てずに保全する」ので、版数は互換性の判定ではなく
      * 「どの版で書かれたか」の記録として使う。
      */
-    const val REVISION = 1
+    const val REVISION = 2
 
     // ----- 選択肢 -----
 
@@ -49,6 +50,36 @@ object TouringSetupSchema {
 
     /** ダンパー上側の取り付け位置。内側から数えた穴の番号 */
     val DAMPER_MOUNT = ChoiceSet.of("damperMount", "pos1", "pos2", "pos3", "pos4", "pos5")
+
+    // ----- G-7 で足した選択肢 -----
+
+    /** デフの形式。ボールデフ / ギアデフ / スプール（直結） / ワンウェイ */
+    val DIFF_TYPE = ChoiceSet.of("diffType", "ball", "gear", "spool", "oneWay")
+
+    /** ベルトの張り。数値で測るものではないので 3 段階の体感で持つ */
+    val BELT_TENSION = ChoiceSet.of("beltTension", "loose", "normal", "tight")
+
+    /**
+     * タイヤのコンパウンド。銘柄ごとに呼び名が違う（ラジアル 24 / ソレックス 32 …）ので、
+     * 硬さの段階だけを持ち、銘柄は自由入力の `tireBrand` に書く。
+     */
+    val TIRE_COMPOUND = ChoiceSet.of("tireCompound", "superSoft", "soft", "medium", "hard")
+
+    /** インナースポンジ */
+    val TIRE_INSERT = ChoiceSet.of("tireInsert", "soft", "medium", "hard", "moulded")
+
+    /** ESC のパンチ（立ち上がりの鋭さ）。メーカーごとに段数が違うので 3 段階に丸める */
+    val ESC_PUNCH = ChoiceSet.of("escPunch", "soft", "medium", "hard")
+
+    /** バラストの位置 */
+    val BALLAST_POSITION =
+        ChoiceSet.of("ballastPosition", "front", "center", "rear", "left", "right")
+
+    /** ステアリングの手応え。アンダー / ニュートラル / オーバー */
+    val STEER_FEEL = ChoiceSet.of("steerFeel", "under", "neutral", "over")
+
+    /** グリップの手応え */
+    val GRIP_FEEL = ChoiceSet.of("gripFeel", "low", "medium", "high")
 
     // ----- セクション -----
 
@@ -238,8 +269,174 @@ object TouringSetupSchema {
         )
     )
 
+    /**
+     * 駆動系（G-7）。列はフロント / センター / リア。
+     *
+     * センターの項目は `HAS_CENTER_DIFF`、ベルトテンションは `BELT_DRIVE` を要求する。
+     * **どちらも「不明なら出す」**（`ChassisTraits.satisfies`）。同梱DBの素性は
+     * 裏の取れたものしか入っていないので、隠すと設定欄が無言で消える（HANDOFF §5.7）。
+     */
+    val DRIVETRAIN = SectionDef(
+        key = "drivetrain",
+        columns = listOf(ColumnDef.FRONT, ColumnDef.CENTER, ColumnDef.REAR),
+        fields = listOf(
+            ChoiceFieldDef(key = "front.diffType", choiceSet = DIFF_TYPE),
+            ChoiceFieldDef(
+                key = "center.diffType",
+                choiceSet = DIFF_TYPE,
+                requires = ChassisTrait.HAS_CENTER_DIFF
+            ),
+            ChoiceFieldDef(key = "rear.diffType", choiceSet = DIFF_TYPE),
+            // ボールデフには入らない項目だが、空欄で済むので形式による出し分けはしない
+            NumberFieldDef(
+                key = "front.diffOilCst",
+                ui = FieldUi.NUMBER_FIELD,
+                min = 100.0, max = 1_000_000.0, step = 100.0,
+                unit = FieldUnit.CST
+            ),
+            NumberFieldDef(
+                key = "center.diffOilCst",
+                ui = FieldUi.NUMBER_FIELD,
+                min = 100.0, max = 1_000_000.0, step = 100.0,
+                unit = FieldUnit.CST,
+                requires = ChassisTrait.HAS_CENTER_DIFF
+            ),
+            NumberFieldDef(
+                key = "rear.diffOilCst",
+                ui = FieldUi.NUMBER_FIELD,
+                min = 100.0, max = 1_000_000.0, step = 100.0,
+                unit = FieldUnit.CST
+            ),
+            ChoiceFieldDef(
+                key = "front.beltTension",
+                choiceSet = BELT_TENSION,
+                requires = ChassisTrait.BELT_DRIVE
+            ),
+            ChoiceFieldDef(
+                key = "rear.beltTension",
+                choiceSet = BELT_TENSION,
+                requires = ChassisTrait.BELT_DRIVE
+            )
+        )
+    )
+
+    /**
+     * タイヤ（G-7）。
+     *
+     * 径を前後で分けて持つのは**実測値**だから。ギアセクションの `tireMm` は
+     * 「計算に使う 1 つの値」で、こちらは走行前に測った記録。
+     * 自動で同期はしない（測った値で計算したければ CALC で入れ直す）。
+     */
+    val TIRE = SectionDef(
+        key = "tire",
+        columns = listOf(ColumnDef.FRONT, ColumnDef.REAR),
+        fields = listOf(
+            TextFieldDef(key = "front.tireBrand", maxLength = 30),
+            TextFieldDef(key = "rear.tireBrand", maxLength = 30),
+            ChoiceFieldDef(key = "front.tireCompound", choiceSet = TIRE_COMPOUND),
+            ChoiceFieldDef(key = "rear.tireCompound", choiceSet = TIRE_COMPOUND),
+            ChoiceFieldDef(key = "front.tireInsert", choiceSet = TIRE_INSERT),
+            ChoiceFieldDef(key = "rear.tireInsert", choiceSet = TIRE_INSERT),
+            TextFieldDef(key = "front.tireAdditive", maxLength = 30),
+            TextFieldDef(key = "rear.tireAdditive", maxLength = 30),
+            NumberFieldDef(
+                key = "front.tireDiaMm",
+                ui = FieldUi.STEPPER,
+                min = 40.0, max = 120.0, step = 0.5, decimals = 1,
+                unit = FieldUnit.MM
+            ),
+            NumberFieldDef(
+                key = "rear.tireDiaMm",
+                ui = FieldUi.STEPPER,
+                min = 40.0, max = 120.0, step = 0.5, decimals = 1,
+                unit = FieldUnit.MM
+            )
+        )
+    )
+
+    /**
+     * モーターと ESC（G-7）。
+     *
+     * ターン数と KV は換算しない（ギアセクションの `motorKv` とは別項目）。
+     * ローターやワインドで同じターン数でも KV が変わるため、換算すると嘘になる。
+     * 換算表を入れるかどうかは ROADMAP F-10 で別途決める。
+     */
+    val ESC = SectionDef(
+        key = "esc",
+        fields = listOf(
+            NumberFieldDef(
+                key = "motorTurn",
+                ui = FieldUi.STEPPER,
+                min = 1.0, max = 30.0, step = 0.5, decimals = 1,
+                unit = FieldUnit.TURN
+            ),
+            TextFieldDef(key = "motorBrand", maxLength = 30),
+            NumberFieldDef(
+                key = "motorTimingDeg",
+                ui = FieldUi.STEPPER,
+                min = 0.0, max = 60.0, step = 1.0,
+                unit = FieldUnit.DEGREE
+            ),
+            TextFieldDef(key = "escBrand", maxLength = 30),
+            NumberFieldDef(
+                key = "escBoostDeg",
+                ui = FieldUi.STEPPER,
+                min = 0.0, max = 60.0, step = 1.0,
+                unit = FieldUnit.DEGREE
+            ),
+            NumberFieldDef(
+                key = "escTurboDeg",
+                ui = FieldUi.STEPPER,
+                min = 0.0, max = 60.0, step = 1.0,
+                unit = FieldUnit.DEGREE
+            ),
+            ChoiceFieldDef(key = "escPunch", choiceSet = ESC_PUNCH),
+            NumberFieldDef(
+                key = "escDragBrakePct",
+                ui = FieldUi.STEPPER,
+                min = 0.0, max = 100.0, step = 5.0,
+                unit = FieldUnit.PERCENT
+            )
+        )
+    )
+
+    /** 車体（G-7）。ボディとバラスト */
+    val BODY = SectionDef(
+        key = "body",
+        fields = listOf(
+            TextFieldDef(key = "bodyName", maxLength = 40),
+            TextFieldDef(key = "bodyWing", maxLength = 30),
+            NumberFieldDef(
+                key = "ballastG",
+                ui = FieldUi.STEPPER,
+                min = 0.0, max = 300.0, step = 5.0,
+                unit = FieldUnit.GRAM
+            ),
+            ChoiceFieldDef(key = "ballastPosition", choiceSet = BALLAST_POSITION)
+        )
+    )
+
+    /**
+     * 走行結果（G-7）。**手応えは値（bag）に置く。**
+     *
+     * 気温やコース名（ヘッダ）と違い、手応えは「そのセッティングの結果」なので
+     * 差分に出したい（前回はアンダー、今回はニュートラル）。
+     * ラップタイムだけはヘッダ（`SessionConditions.bestLapMs`）にある — あれは
+     * セッティングの評価ではなく、そのセッションの記録だから。
+     */
+    val RESULT = SectionDef(
+        key = "result",
+        fields = listOf(
+            ChoiceFieldDef(key = "feelEntry", choiceSet = STEER_FEEL),
+            ChoiceFieldDef(key = "feelMid", choiceSet = STEER_FEEL),
+            ChoiceFieldDef(key = "feelExit", choiceSet = STEER_FEEL),
+            ChoiceFieldDef(key = "gripFeel", choiceSet = GRIP_FEEL)
+        )
+    )
+
     /** 表示順そのもの。セクションを足すときはここに並べる */
-    val sections: List<SectionDef> = listOf(GEAR, SUSPENSION, DAMPER)
+    val sections: List<SectionDef> =
+        listOf(GEAR, DRIVETRAIN, SUSPENSION, DAMPER, TIRE, ESC, BODY, RESULT)
 
     /** 全項目を宣言順で平坦化したもの */
     val allFields: List<FieldDef> = sections.flatMap { it.fields }
