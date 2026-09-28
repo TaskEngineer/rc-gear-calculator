@@ -66,16 +66,19 @@ fun ChassisEditScreen(
             }
 
             // ---- 編集フォーム ----
+            // エラーは入力のたびに欄の下へ出し、残っている間は保存させない（BUG-7）
             RcNumberField(
                 label = stringResource(R.string.field_internal_ratio),
                 value = state.ratioInput,
                 onValueChange = viewModel::onRatioChange,
+                error = state.ratioError?.asString(),
                 decimal = true
             )
             RcNumberField(
                 label = stringResource(R.string.field_tire_mm),
                 value = state.tireInput,
                 onValueChange = viewModel::onTireChange,
+                error = state.tireError?.asString(),
                 unit = stringResource(R.string.unit_millimeter)
             )
             RcTextField(
@@ -85,16 +88,9 @@ fun ChassisEditScreen(
                 singleLine = false
             )
 
-            state.errorMessage?.let {
-                Text(
-                    text = it.asString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
             Button(
                 onClick = viewModel::onSave,
+                enabled = state.canSave,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.action_save))

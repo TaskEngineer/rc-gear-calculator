@@ -2,8 +2,8 @@
 
 > **Status**: MVP 完了 + **セッティングシート化 Phase 0 / 1 / 2 / 3 完了**（Phase 3 = UI 構築）。
 > **実機確認と instrumented テストは 2026-09-28 に実施済み**（§7.1）。
-> そこで出た **BUG-6（クラッシュ）は同日に修正済み**。残りは BUG-7（低）と UI の粗さ 4 件（`ROADMAP.md` Phase 3.5）。
-> **Last Updated**: 2026-09-28（実機確認 + instrumented テストの結果、および BUG-6 の修正を反映）
+> そこで出た **BUG-6（クラッシュ）と BUG-7 は同日に修正済み**。残りは UI の粗さ 4 件（`ROADMAP.md` Phase 3.5）。
+> **Last Updated**: 2026-09-28（実機確認 + instrumented テストの結果、および BUG-6 / BUG-7 の修正を反映）
 > **対象読者**: 次にこのリポジトリを扱う AI エージェントと、その指示を出す本人。
 >
 > 運用ルールは `AGENTS.md`、機能ロードマップは `ROADMAP.md`、当初計画は `PLAN.md`（凍結）。
@@ -24,7 +24,7 @@
 | 共有 UI | `core/designsystem/component/` に 13 部品（全てに `@Preview`）+ `feature/sheet/component/`（`FieldEditor` / `SheetSectionCard`。どちらも `@Preview` 付き）。文言は `strings.xml`（約 330 件） |
 | モジュール | `:app`（Android）＋ `:core:domain`（純 Kotlin JVM） |
 | ビルド | `:app:assembleDebug` / `:app:lintDebug` / `ktlintCheck` 成功（2026-09-26 確認） |
-| 単体テスト | **337 件成功**（`:core:domain` 127 / `:app` 210）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 + Phase 3 の ViewModel 8 本とテキスト整形 + BUG-6 の回帰 5 件 |
+| 単体テスト | **348 件成功**（`:core:domain` 127 / `:app` 221）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 + Phase 3 の ViewModel 9 本とテキスト整形 + BUG-6 の回帰 5 件 + BUG-7 の `ChassisEditViewModelTest` 11 件 |
 | Instrumented / UI テスト | **24 件、全件成功**（2026-09-28）。DAO テスト 17 件 + `SetupSheetRepositoryImpl` 7 件（BUG-6）。DAO 側はエミュレータ Pixel_8（API 34）と実機 SO-53C（Android 14 / API 34 / 720x1496）の両方で、Repository 側は Pixel_8 で実行。手順は §6.1 |
 | Lint / 静的解析 | **ktlint 導入済み**（`ktlintCheck` 緑）。Android Lint も CI で実行 |
 | CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**2026-09-26 の PR #1 で初回実行、全ステップ緑**（5m14s）。instrumented テストは CI に入っていない（エミュレータが要るため。§6 参照） |
@@ -59,8 +59,8 @@ AGP を上げると解消する見込みだが、Gradle と AGP の互換表に�
 **BUG-1 〜 BUG-5 はすべて Phase 0 で決着済み**（BUG-4 のみ「誤記だった」という決着）。
 再現手順と原因は、同じ壊れ方を再び作らないための記録として残す。
 
-**BUG-6 / BUG-7 は 2026-09-28 の実機確認（§7.1）で見つかった不具合。**
-BUG-6（クラッシュ）は同日に修正済み。**BUG-7 は未修正**（落ちはしないので優先度は低い）。
+**BUG-6 / BUG-7 は 2026-09-28 の実機確認（§7.1）で見つかった不具合。どちらも同日に修正済み。**
+現時点で未修正の不具合は無い（残っているのは UI の粗さ 4 件で、`ROADMAP.md` の Phase 3.5）。
 
 ### BUG-1: タイヤ径の上書きが範囲外だと CALC がクラッシュする（重要度: 高）
 
@@ -155,9 +155,9 @@ android.database.sqlite.SQLiteConstraintException: FOREIGN KEY constraint failed
   修正後の APK でエミュレータ Pixel_8 に対して再演し、**どちらもバナーが消え、落ちない**ことを確認。
   `adb logcat -b crash` も空。「CALC が丸ごと空になる」症状も併せて消えた。
 
-### BUG-7: シャーシ上書きの編集画面は範囲外を入力させてから弾く（重要度: 低・未修正）
+### BUG-7: シャーシ上書きの編集画面は範囲外を入力させてから弾く（重要度: 低）
 
-**[未修正 / 2026-09-28 の実機確認で発見]**
+**[解消: 2026-09-28。発見と修正は同日]**
 
 - 再現: DB → 任意シャーシ → 内部減速比に `0`、タイヤ径に `200` を入力。
   入力中はエラーも出ず「保存」も押せる。押した瞬間に初めて
@@ -166,8 +166,24 @@ android.database.sqlite.SQLiteConstraintException: FOREIGN KEY constraint failed
 - 影響: BUG-1 の再発には**至らない**（保存は拒否されるので不正値は DB に入らない）。
   UX だけの問題。`SheetEditScreen` は入力のたびに検証してエラーを出し保存ボタンを無効化するので、
   こちらだけ挙動が違う。
-- 修正方針: `ChassisEditViewModel` を `SheetEditViewModel` と同じ形（入力のたびに
-  `FieldValidator` を通し、`errors` が空でなければ保存不可）に揃える。
+- 修正: `ChassisEditViewModel` を `SheetEditViewModel` と同じ形に揃えた。
+  - `ChassisEditUiState` の単一の `errorMessage` を **項目ごとの `ratioError` / `tireError`** に分け、
+    `onRatioChange` / `onTireChange` が入力のたびに検証して埋める。
+    画面は `RcNumberField(error = ...)` で欄の下に出す（この部品は元から `error` を取れる）。
+  - `canSave` を足し、エラーが残っている間は保存ボタンを無効にする（`SheetEditUiState.canSave` と同じ規約）。
+  - **空欄はエラーにしない。** 消して打ち直している最中に赤くなるのは煩わしいだけで、
+    「まだ入力していない」は違反ではない。空のまま保存されないことは `canSave` が担保する
+    （内部減速比とタイヤ径は必須。空で保存すると「上書きを外す」＝リセットと区別が付かない）。
+  - **読み込んだ値も init で検証に通す。** 古いデータや手で書いた JSON から範囲外の値が
+    入っていた場合、開いた時点でエラーが出ていないと「触っていないのに保存できる」状態が残る。
+- テスト: `ChassisEditViewModelTest` を新設（11 件）。この画面はテストが 1 本も無かったので、
+  「標準値と同じ値は上書きにしない」という元からの仕様も併せて固定した。
+- 確認: エミュレータ Pixel_8 で DB → TT-02 → タイヤ径に `200` を入力 →
+  **その場で欄が赤くなり「タイヤ径は 40〜120mm の整数で入力してください」が出て、保存が押せない**。
+  `65` に直すとエラーが消えて保存が有効に戻ることまで確認。
+- **残っている同型の画面**: `UserChassisEditViewModel` / `CarEditViewModel` /
+  `SheetHeaderEditViewModel` も「保存時にまとめて 1 件ずつ」の古い形のまま。
+  落ちも不正値の混入も起きないので BUG にはしていないが、`ROADMAP.md` の Phase 3.5 に載せた。
 
 ---
 
@@ -757,7 +773,7 @@ Android 14 / API 34 / 720x1496 @300dpi**。debug ビルド（`0.1.0-debug`）を
 | # | 見つかったもの | 扱い |
 |---|---|---|
 | 17 前後 | 消えたシートに「このシートに反映」でクラッシュ | **BUG-6（高）→ 同日に修正済み** |
-| 3 / 4 | シャーシ上書きの範囲外入力が保存時まで弾かれない（落ちはしない） | **BUG-7（低・未修正）** |
+| 3 / 4 | シャーシ上書きの範囲外入力が保存時まで弾かれない（落ちはしない） | **BUG-7（低）→ 同日に修正済み** |
 | 15 | `DatePicker` の文言が英語（"Select date" / "S M T W T F S" / M-D-Y 並び） | 下記 |
 | 5 | ライトテーマの見出し（DISPLAY / DATA）と数値のミント色が白背景で低コントラスト | 下記 |
 | 2 / 19 | CALC の 2 つの FAB が内容に重なる（実機 720px で「ロールアウト」の値と「セッティング傾向」が隠れる） | 下記 |
@@ -778,8 +794,8 @@ Android 14 / API 34 / 720x1496 @300dpi**。debug ビルド（`0.1.0-debug`）を
    720px ではタイトルの幅が 120px 程度しか残らない。overflow メニューに畳むのが妥当。
 
 **再現に使った手順はこのファイルの BUG-6 / BUG-7 に書いてある。**
-**BUG-6 は同日（2026-09-28）に修正し、同じ手順で再演して落ちないことを確認済み**（§2 の BUG-6 参照）。
-残る BUG-7 と上の 4 件は `ROADMAP.md` の Phase 3.5 に載せてある。
+**どちらも同日（2026-09-28）に修正し、同じ手順を再演して直っていることを確認済み**（§2 参照）。
+残る 4 件（UI の粗さ）は `ROADMAP.md` の Phase 3.5 に載せてある。
 
 **instrumented テストは修正後に 24 件へ増え、Pixel_8 で全件成功**
 （DAO 17 件 + `SetupSheetRepositoryImpl` 7 件）。実機 SO-53C で回したのは修正前の DAO 16 件まで。

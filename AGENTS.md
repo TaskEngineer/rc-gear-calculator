@@ -14,7 +14,7 @@
   **タブは GARAGE / CALC / DB / CONFIG の 4 つ。** GARAGE は 車一覧 → 車詳細（シート一覧）
   → シート閲覧 → セクション編集 / ヘッダ編集 / 比較 と続く。
   **実機確認と instrumented テストは 2026-09-28 に実施済み**（`docs/HANDOFF.md` §7.1）。
-  そこで出た BUG-6（クラッシュ）は修正済み。残りは `docs/ROADMAP.md` の Phase 3.5。
+  そこで出た BUG-6（クラッシュ）と BUG-7 は修正済み。残りは `docs/ROADMAP.md` の Phase 3.5。
 - コード内コメント・UI 文言・ドキュメントは **日本語** で統一している。新規コードも日本語コメントで書く。
 
 ## 2. ビルド・テスト（必ずこの手順で）
@@ -23,7 +23,7 @@
 # Windows / PowerShell。JAVA は PATH に無いので JAVA_HOME を明示する
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 .\gradlew.bat :app:assembleDebug --console=plain      # デバッグビルド
-.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 337 件）
+.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 348 件）
 .\gradlew.bat :core:domain:test --console=plain       # ドメインのみ（Android を経由しないので速い）
 .\gradlew.bat :app:lintDebug --console=plain          # Android Lint
 ```
