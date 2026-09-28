@@ -3,6 +3,7 @@ package io.github.taskengineer.rcgear.domain.backup
 import io.github.taskengineer.rcgear.domain.model.Car
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.SetupSheetWithValues
+import io.github.taskengineer.rcgear.domain.model.UserChassis
 
 /**
  * バックアップ 1 ファイル分の中身（REF-2 / S-5、M-6 で v2 化）。
@@ -17,7 +18,12 @@ data class BackupData(
     val exportedAt: Long,
     val cars: List<Car> = emptyList(),
     val sheets: List<SetupSheetWithValues> = emptyList(),
-    val overrides: List<ChassisOverride> = emptyList()
+    val overrides: List<ChassisOverride> = emptyList(),
+    /**
+     * ユーザー定義シャーシ（F-5）。**車より先に復元する必要がある** —
+     * 車の `chassisId` がこれを指しているため。
+     */
+    val userChassis: List<UserChassis> = emptyList()
 )
 
 /**

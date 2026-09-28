@@ -161,6 +161,8 @@ class ConfigViewModel @Inject constructor(
             // シートと値は cars の CASCADE で一緒に消える
             carRepository.deleteAll()
             chassisRepository.resetAllOverrides()
+            // 自作シャーシ（F-5）もユーザーが作ったデータなので一緒に消す
+            chassisRepository.deleteAllUserChassis()
             preferencesRepository.clear()
             _uiState.update {
                 it.copy(

@@ -8,6 +8,7 @@ import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.SetupSheetWithValues
 import io.github.taskengineer.rcgear.domain.model.SetupValues
+import io.github.taskengineer.rcgear.domain.model.UserChassis
 import io.github.taskengineer.rcgear.domain.repository.CarRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.SetupSheetRepository
@@ -25,6 +26,9 @@ import javax.inject.Inject
  * - 車 / シート: **id（UUID）による upsert**。同じファイルを 2 回読んでも増えない。
  *   v1 の「同名スキップ」はリネームで往復不能になる奇妙な挙動だったので捨てた
  * - 上書き: chassisId 単位で upsert。標準 DB に無い chassisId はスキップ
+ * - ユーザー定義シャーシ（F-5）: id による upsert。**車より先に入れる** —
+ *   車の `chassisId` がこれを指しているため、後にすると取り込んだ車が
+ *   「不明なシャーシ」になる
  *
  * ### 値の検証（REF-1 / BUG-2）
  * JSON は手で書き換えられるので、値が範囲に収まっている保証がない。
@@ -61,6 +65,8 @@ class ImportDataUseCase @Inject constructor(
          * @property importedOverrides 取り込まれた上書き数
          * @property skippedOverrides  不明シャーシでスキップされた上書き数
          * @property invalidOverrides  値が範囲外で棄却された上書き数
+         * @property importedUserChassis 取り込まれたユーザー定義シャーシ数（F-5）
+         * @property skippedUserChassis  id 規約違反・値が範囲外で棄却した数
          */
         data class Success(
             val importedCars: Int = 0,
@@ -70,7 +76,9 @@ class ImportDataUseCase @Inject constructor(
             val droppedValues: Int = 0,
             val importedOverrides: Int = 0,
             val skippedOverrides: Int = 0,
-            val invalidOverrides: Int = 0
+            val invalidOverrides: Int = 0,
+            val importedUserChassis: Int = 0,
+            val skippedUserChassis: Int = 0
         ) : Result
 
         /** JSON 構文エラー・フォーマット不一致 */
@@ -90,6 +98,18 @@ class ImportDataUseCase @Inject constructor(
     }
 
     private suspend fun import(data: BackupData): Result {
+        // ---- ユーザー定義シャーシ（車より先。車の chassisId が指している） ----
+        var skippedUserChassis = 0
+        val userChassisToInsert = mutableListOf<UserChassis>()
+        for (chassis in data.userChassis.distinctBy { it.id }) {
+            if (chassis.isImportable()) {
+                userChassisToInsert += chassis
+            } else {
+                skippedUserChassis++
+            }
+        }
+        chassisRepository.restoreAllUserChassis(userChassisToInsert)
+
         // ---- 車 ----
         var skippedCars = 0
         val carsToInsert = mutableListOf<Car>()
@@ -156,6 +176,8 @@ class ImportDataUseCase @Inject constructor(
         chassisRepository.restoreAllOverrides(overridesToInsert)
 
         return Result.Success(
+            importedUserChassis = userChassisToInsert.size,
+            skippedUserChassis = skippedUserChassis,
             importedCars = carsToInsert.size,
             skippedCars = skippedCars,
             importedSheets = safeSheets.size,
@@ -170,15 +192,29 @@ class ImportDataUseCase @Inject constructor(
     // ----- 検証 -----
 
     /**
-     * 同梱シャーシ DB に居るか。`user_` で始まる id はユーザー定義シャーシ（F-5）の
-     * 取り込みに備えて通す — その受け皿はまだ無いが、ここで弾くと将来
-     * 「車だけ消えたバックアップ」を作ることになる。
+     * 同梱シャーシ DB に居るか。`user_` で始まる id はユーザー定義シャーシ（F-5）なので通す。
+     *
+     * **その定義が同じファイルに入っていなくても通す。** 定義だけ先に消した
+     * バックアップを読んだときに「車ごと消える」より、「不明なシャーシの車」として
+     * 残るほうが復旧できる（一覧は id をそのまま出す）。
      */
     private suspend fun isKnownChassis(chassisId: String): Boolean = when {
         chassisId.isBlank() -> false
-        chassisId.startsWith(USER_CHASSIS_PREFIX) -> true
+        UserChassis.isUserDefined(chassisId) -> true
         else -> chassisRepository.getStandardChassisById(chassisId) != null
     }
+
+    /**
+     * ユーザー定義シャーシの検証。
+     *
+     * id の接頭辞は**規約**（同梱 DB と衝突させない）なので、違反したら取り込まない。
+     * 通すと同梱エントリを名前で上書きするような id が作れてしまう。
+     */
+    private fun UserChassis.isImportable(): Boolean =
+        UserChassis.isUserDefined(id) &&
+            name.isNotBlank() &&
+            GearCalculationInput.isValidInternalRatio(internalRatio) &&
+            defaultTireMm in GearCalculationInput.TIRE_MM_RANGE
 
     /**
      * 上書きの検証。null は「このフィールドは上書きしない」の意味なので有効。
@@ -198,9 +234,5 @@ class ImportDataUseCase @Inject constructor(
         val violations = validateAll(values).map { it.fieldKey }.toSet()
         if (violations.isEmpty()) return values
         return SetupValues(values.map.filterKeys { it !in violations })
-    }
-
-    private companion object {
-        const val USER_CHASSIS_PREFIX = "user_"
     }
 }

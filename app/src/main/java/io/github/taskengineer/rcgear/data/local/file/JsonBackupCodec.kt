@@ -6,19 +6,24 @@ import io.github.taskengineer.rcgear.data.local.file.dto.ExportedOverrideDto
 import io.github.taskengineer.rcgear.data.local.file.dto.ExportedSchemaRefDto
 import io.github.taskengineer.rcgear.data.local.file.dto.ExportedSetupDto
 import io.github.taskengineer.rcgear.data.local.file.dto.ExportedSheetDto
+import io.github.taskengineer.rcgear.data.local.file.dto.ExportedUserChassisDto
 import io.github.taskengineer.rcgear.domain.backup.BackupCodec
 import io.github.taskengineer.rcgear.domain.backup.BackupData
 import io.github.taskengineer.rcgear.domain.backup.LegacyBackupConverter
 import io.github.taskengineer.rcgear.domain.backup.LegacySavedSetup
 import io.github.taskengineer.rcgear.domain.common.IdGenerator
 import io.github.taskengineer.rcgear.domain.model.Car
+import io.github.taskengineer.rcgear.domain.model.ChassisCategory
+import io.github.taskengineer.rcgear.domain.model.ChassisDrive
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
+import io.github.taskengineer.rcgear.domain.model.ChassisTraits
 import io.github.taskengineer.rcgear.domain.model.SessionConditions
 import io.github.taskengineer.rcgear.domain.model.SetupSheet
 import io.github.taskengineer.rcgear.domain.model.SetupSheetWithValues
 import io.github.taskengineer.rcgear.domain.model.SetupValue
 import io.github.taskengineer.rcgear.domain.model.SetupValueCodec
 import io.github.taskengineer.rcgear.domain.model.SetupValues
+import io.github.taskengineer.rcgear.domain.model.UserChassis
 import io.github.taskengineer.rcgear.domain.schema.TouringSetupSchema
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
@@ -73,6 +78,7 @@ class JsonBackupCodec @Inject constructor(
                 cars = data.cars.map { it.toDto() },
                 sheets = data.sheets.map { it.toDto() },
                 overrides = data.overrides.map { it.toDto() },
+                userChassis = data.userChassis.map { it.toDto() },
                 // v1 の保存セッティングは M-3 でテーブルごと無くなった。書き出しは常に空
                 setups = emptyList()
             )
@@ -109,11 +115,45 @@ class JsonBackupCodec @Inject constructor(
                 exportedAt = dto.exportedAt,
                 cars = dto.cars.map { it.toDomain() },
                 sheets = dto.sheets.map { it.toDomain() },
-                overrides = overrides
+                overrides = overrides,
+                userChassis = dto.userChassis.map { it.toDomain() }
             )
         }
         return BackupCodec.DecodeResult.Success(data)
     }
+
+    // ----- ユーザー定義シャーシ（F-5） -----
+
+    private fun UserChassis.toDto() = ExportedUserChassisDto(
+        id = id,
+        makerName = makerName,
+        name = name,
+        internalRatio = internalRatio,
+        defaultTireMm = defaultTireMm,
+        category = category.name,
+        drive = traits.drive?.name,
+        hasCenterDiff = traits.hasCenterDiff,
+        note = note,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
+
+    private fun ExportedUserChassisDto.toDomain() = UserChassis(
+        id = id,
+        makerName = makerName,
+        name = name,
+        internalRatio = internalRatio,
+        defaultTireMm = defaultTireMm,
+        // 知らない分類・駆動方式は既定に落とす（読み込みを落とさない。M-7 と同じ方針）
+        category = ChassisCategory.fromKey(category),
+        traits = ChassisTraits(
+            drive = ChassisDrive.fromKey(drive),
+            hasCenterDiff = hasCenterDiff
+        ),
+        note = note,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
 
     // ----- ドメイン -> DTO -----
 

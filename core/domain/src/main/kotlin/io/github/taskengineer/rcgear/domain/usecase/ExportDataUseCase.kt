@@ -9,7 +9,8 @@ import io.github.taskengineer.rcgear.domain.repository.SetupSheetRepository
 import javax.inject.Inject
 
 /**
- * 全データ（車 + セッティングシート + シャーシ上書き）を書き出す（PLAN Step 11 / M-6）。
+ * 全データ（車 + セッティングシート + シャーシ上書き + ユーザー定義シャーシ）を
+ * 書き出す（PLAN Step 11 / M-6 / F-5）。
  *
  * ファイルへの書き込み（SAF）は呼び出し側（ConfigViewModel + JsonFileDataSource）が行う。
  * この UseCase は「現在のデータを集める」ところまでを担当し、
@@ -32,7 +33,8 @@ class ExportDataUseCase @Inject constructor(
                 exportedAt = timeProvider.now(),
                 cars = carRepository.getAllOnce(),
                 sheets = sheetRepository.getAllOnce(),
-                overrides = chassisRepository.getAllOverridesOnce()
+                overrides = chassisRepository.getAllOverridesOnce(),
+                userChassis = chassisRepository.getAllUserChassisOnce()
             )
         )
 }

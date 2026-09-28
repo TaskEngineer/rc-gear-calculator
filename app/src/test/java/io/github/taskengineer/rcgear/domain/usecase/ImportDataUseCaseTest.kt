@@ -321,6 +321,72 @@ class ImportDataUseCaseTest {
         assertEquals(1, cars.getAllOnce().size)
     }
 
+    // ----- userChassis_（F-5） -----
+
+    @Test
+    fun `userChassis_自作シャーシが取り込まれる`() = runTest {
+        val result = useCase(
+            v2Json(userChassis = listOf(userChassisJson()))
+        )
+
+        result.assertSuccess(importedUserChassis = 1)
+        assertEquals("X4", chassis.getAllUserChassisOnce().single().name)
+    }
+
+    @Test
+    fun `userChassis_自作シャーシを使う車も一緒に取り込まれる`() = runTest {
+        // 定義より先に車を入れると外部キーは無くても「不明なシャーシ」になる。
+        // UseCase が自作シャーシを先に入れているかを見る
+        val result = useCase(
+            v2Json(
+                userChassis = listOf(userChassisJson()),
+                cars = listOf(carJson(chassisId = "user_x4"))
+            )
+        )
+
+        result.assertSuccess(importedUserChassis = 1, importedCars = 1)
+        assertEquals("user_x4", cars.getAllOnce().single().chassisId)
+    }
+
+    @Test
+    fun `userChassis_定義が無くてもそれを指す車は取り込む`() = runTest {
+        // 定義だけ落ちたファイルで車ごと消えるより、「不明なシャーシ」で残るほうが復旧できる
+        val result = useCase(v2Json(cars = listOf(carJson(chassisId = "user_missing"))))
+
+        result.assertSuccess(importedCars = 1)
+    }
+
+    @Test
+    fun `userChassis_id が規約に反するものは棄却する`() = runTest {
+        // user_ 接頭辞は同梱 DB と衝突させないための規約。破られると
+        // 同梱エントリを名前で乗っ取る id が作れてしまう
+        val result = useCase(
+            v2Json(userChassis = listOf(userChassisJson(id = "tamiya_tt02")))
+        )
+
+        result.assertSuccess(skippedUserChassis = 1)
+        assertTrue(chassis.getAllUserChassisOnce().isEmpty())
+    }
+
+    @Test
+    fun `userChassis_範囲外の値を持つものは棄却する`() = runTest {
+        val result = useCase(
+            v2Json(userChassis = listOf(userChassisJson(internalRatio = 0.0)))
+        )
+
+        result.assertSuccess(skippedUserChassis = 1)
+    }
+
+    @Test
+    fun `userChassis_同じファイルを 2 回読んでも増えない`() = runTest {
+        val json = v2Json(userChassis = listOf(userChassisJson()))
+
+        useCase(json)
+        useCase(json)
+
+        assertEquals(1, chassis.getAllUserChassisOnce().size)
+    }
+
     // ----- ヘルパー -----
 
     private fun ImportDataUseCase.Result.assertSuccess(
@@ -331,7 +397,9 @@ class ImportDataUseCaseTest {
         droppedValues: Int = 0,
         importedOverrides: Int = 0,
         skippedOverrides: Int = 0,
-        invalidOverrides: Int = 0
+        invalidOverrides: Int = 0,
+        importedUserChassis: Int = 0,
+        skippedUserChassis: Int = 0
     ) {
         val actual = this as? ImportDataUseCase.Result.Success
             ?: throw AssertionError("Success を期待したが $this だった")
@@ -344,7 +412,9 @@ class ImportDataUseCaseTest {
                 droppedValues = droppedValues,
                 importedOverrides = importedOverrides,
                 skippedOverrides = skippedOverrides,
-                invalidOverrides = invalidOverrides
+                invalidOverrides = invalidOverrides,
+                importedUserChassis = importedUserChassis,
+                skippedUserChassis = skippedUserChassis
             ),
             actual
         )
@@ -353,14 +423,29 @@ class ImportDataUseCaseTest {
     private fun v2Json(
         cars: List<String> = emptyList(),
         sheets: List<String> = emptyList(),
-        overrides: List<String> = emptyList()
+        overrides: List<String> = emptyList(),
+        userChassis: List<String> = emptyList()
     ): String = """
         {
           "schemaVersion": 2,
           "exportedAt": 1750000000000,
           "cars": [${cars.joinToString(",")}],
           "sheets": [${sheets.joinToString(",")}],
-          "overrides": [${overrides.joinToString(",")}]
+          "overrides": [${overrides.joinToString(",")}],
+          "userChassis": [${userChassis.joinToString(",")}]
+        }
+    """.trimIndent()
+
+    private fun userChassisJson(
+        id: String = "user_x4",
+        name: String = "X4",
+        internalRatio: Double = 1.9
+    ): String = """
+        {
+          "id": "$id", "makerName": "XRAY", "name": "$name",
+          "internalRatio": $internalRatio, "defaultTireMm": 62,
+          "category": "TOURING", "drive": "BELT_4WD", "hasCenterDiff": false,
+          "note": null, "createdAt": 1, "updatedAt": 2
         }
     """.trimIndent()
 

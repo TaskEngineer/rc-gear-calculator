@@ -18,9 +18,11 @@ import kotlinx.serialization.json.JsonObject
  *   取り込みが id による upsert になり、**書き出し / 読み込みが冪等**になる
  *   （v1 の「同名スキップ」という奇妙な挙動と、リネームで往復不能になる問題が両方消える）
  *
- * ユーザー定義シャーシ（`user_chassis`）はまだ出力しない。テーブルは M-3 で作ったが
- * 使うのは F-5（Phase 3）なので、その時に `userChassis` キーを**追加**する。
- * 読み込み側は知らないキーを無視するので、追加に版上げは要らない。
+ * ### `userChassis` の追加（F-5）
+ * ユーザー定義シャーシを [userChassis] キーで出すようにした。**版は上げない** —
+ * 既存キーの意味は変えておらず、キーの追加だけだから（読み込み側は
+ * `ignoreUnknownKeys` で知らないキーを無視する）。古いアプリでこのファイルを読むと
+ * 自作シャーシの定義だけが落ち、それを指す車は「不明なシャーシ」として残る。
  *
  * **`schemaVersion` の既定値を [CURRENT_SCHEMA_VERSION] に連動させてはいけない**
  * （Phase 0 レビュー）。既定値はデコード時に「キーが無かった場合の値」として働く。
@@ -38,6 +40,7 @@ data class ExportDataDto(
     @SerialName("cars") val cars: List<ExportedCarDto> = emptyList(),
     @SerialName("sheets") val sheets: List<ExportedSheetDto> = emptyList(),
     @SerialName("overrides") val overrides: List<ExportedOverrideDto> = emptyList(),
+    @SerialName("userChassis") val userChassis: List<ExportedUserChassisDto> = emptyList(),
     /** v1 の保存セッティング。書き出しでは常に空で、読み込み時だけ中身が入る */
     @SerialName("setups") val setups: List<ExportedSetupDto> = emptyList()
 ) {
@@ -119,6 +122,27 @@ data class ExportedSetupDto(
     @SerialName("kv") val kv: Int,
     @SerialName("cells") val cells: Int,
     @SerialName("tireMm") val tireMm: Int,
+    @SerialName("createdAt") val createdAt: Long,
+    @SerialName("updatedAt") val updatedAt: Long
+)
+
+/**
+ * ユーザー定義シャーシ 1 件分（F-5）。
+ *
+ * id は `user_<uuid>` で端末固有ではないので、そのまま出す
+ * （車の `chassisId` がこれを指すため、落とすと参照が切れる）。
+ */
+@Serializable
+data class ExportedUserChassisDto(
+    @SerialName("id") val id: String,
+    @SerialName("makerName") val makerName: String,
+    @SerialName("name") val name: String,
+    @SerialName("internalRatio") val internalRatio: Double,
+    @SerialName("defaultTireMm") val defaultTireMm: Int,
+    @SerialName("category") val category: String? = null,
+    @SerialName("drive") val drive: String? = null,
+    @SerialName("hasCenterDiff") val hasCenterDiff: Boolean? = null,
+    @SerialName("note") val note: String? = null,
     @SerialName("createdAt") val createdAt: Long,
     @SerialName("updatedAt") val updatedAt: Long
 )

@@ -4,6 +4,7 @@ import io.github.taskengineer.rcgear.data.local.file.JsonBackupCodec
 import io.github.taskengineer.rcgear.domain.common.TimeProvider
 import io.github.taskengineer.rcgear.domain.model.SetupValue
 import io.github.taskengineer.rcgear.domain.model.SetupValues
+import io.github.taskengineer.rcgear.domain.model.UserChassis
 import io.github.taskengineer.rcgear.fake.FakeCarRepository
 import io.github.taskengineer.rcgear.fake.FakeChassisRepository
 import io.github.taskengineer.rcgear.fake.FakeIdGenerator
@@ -143,7 +144,63 @@ class ExportDataUseCaseTest {
         assertEquals(export(), export())
     }
 
+    // ----- userChassis_（F-5） -----
+
+    @Test
+    fun `userChassis_自作シャーシも書き出される`() = runTest {
+        chassis.addUserChassis(userChassis("XRAY", "X4"))
+
+        val json = export()
+
+        assertTrue(json.contains("\"userChassis\""))
+        assertTrue(json.contains("\"X4\""))
+    }
+
+    @Test
+    fun `userChassis_自作シャーシとそれを使う車が往復する`() = runTest {
+        // 自作シャーシの定義が戻らないと、車が「不明なシャーシ」になってしまう
+        val chassisId = chassis.addUserChassis(userChassis("XRAY", "X4"))
+        val carId = cars.createCar("X4 #1", chassisId)
+        sheets.createSheet(carId, "Rd1", SetupValues.of("pinion" to SetupValue.IntV(29)))
+
+        val json = export()
+
+        val restoredSheets = FakeSetupSheetRepository()
+        val restoredCars = FakeCarRepository(sheetRepository = restoredSheets)
+        val restoredChassis = FakeChassisRepository()
+        val importer = ImportDataUseCase(
+            restoredCars,
+            restoredSheets,
+            restoredChassis,
+            codec,
+            FakeTransactionRunner(restoredCars, restoredSheets, restoredChassis)
+        )
+        val result = importer(json)
+
+        assertEquals(
+            ImportDataUseCase.Result.Success(
+                importedUserChassis = 1,
+                importedCars = 1,
+                importedSheets = 1
+            ),
+            result
+        )
+        assertEquals(chassis.getAllUserChassisOnce(), restoredChassis.getAllUserChassisOnce())
+        assertEquals(chassisId, restoredCars.getAllOnce().single().chassisId)
+    }
+
     // ----- ヘルパー -----
+
+    private fun userChassis(maker: String, name: String) = UserChassis(
+        // id と時刻は Repository が採番・設定する
+        id = "",
+        makerName = maker,
+        name = name,
+        internalRatio = 1.9,
+        defaultTireMm = 62,
+        createdAt = 0L,
+        updatedAt = 0L
+    )
 
     private suspend fun export(): String =
         ExportDataUseCase(cars, sheets, chassis, codec, fixedTime)()

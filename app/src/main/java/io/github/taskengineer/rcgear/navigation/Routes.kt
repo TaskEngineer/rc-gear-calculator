@@ -100,9 +100,21 @@ data object Db
 @Serializable
 data object Config
 
-/** シャーシ編集画面 */
+/** シャーシ編集画面（同梱エントリへの上書き） */
 @Serializable
 data class ChassisEdit(val chassisId: String)
+
+/**
+ * ユーザー定義シャーシの作成画面（F-5）。
+ *
+ * 編集（[UserChassisEdit]）と同じ画面を引数なしで開く。車の [CarCreate] と同じ形。
+ */
+@Serializable
+data object UserChassisCreate
+
+/** ユーザー定義シャーシの編集画面 */
+@Serializable
+data class UserChassisEdit(val chassisId: String)
 
 // ============================================================
 // SavedStateHandle からのルート復元
@@ -116,6 +128,13 @@ data class ChassisEdit(val chassisId: String)
 // キー名はルートクラスのプロパティ名と一致していなければならない。
 // その危ない対応関係をルート定義と同じファイルに閉じ込めるのが、この関数群の役目。
 // ============================================================
+
+/**
+ * ユーザー定義シャーシ編集画面のルート引数を復元する。
+ * [UserChassisCreate]（新規作成）で開いた場合は引数が無いので `null`。
+ */
+fun SavedStateHandle.userChassisEditRouteOrNull(): UserChassisEdit? =
+    get<String>("chassisId")?.let { UserChassisEdit(chassisId = it) }
 
 /** CALC 画面のルート引数を復元する。引数なしで開かれた場合は [Calc.sheetId] が null */
 fun SavedStateHandle.calcRoute(): Calc = Calc(sheetId = get<String>("sheetId"))
@@ -206,7 +225,11 @@ enum class TopLevelDestination(
         titleRes = R.string.tab_title_db,
         selectedIcon = Icons.Filled.Storage,
         unselectedIcon = Icons.Outlined.Storage,
-        childRoutes = listOf(ChassisEdit::class)
+        childRoutes = listOf(
+            ChassisEdit::class,
+            UserChassisCreate::class,
+            UserChassisEdit::class
+        )
     ),
     CONFIG(
         route = Config,

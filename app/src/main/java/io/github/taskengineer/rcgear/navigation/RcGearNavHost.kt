@@ -13,6 +13,7 @@ import io.github.taskengineer.rcgear.feature.calc.CalcScreen
 import io.github.taskengineer.rcgear.feature.config.ConfigScreen
 import io.github.taskengineer.rcgear.feature.db.ChassisEditScreen
 import io.github.taskengineer.rcgear.feature.db.DbScreen
+import io.github.taskengineer.rcgear.feature.db.UserChassisEditScreen
 import io.github.taskengineer.rcgear.feature.garage.CarDetailScreen
 import io.github.taskengineer.rcgear.feature.garage.CarEditScreen
 import io.github.taskengineer.rcgear.feature.garage.GarageScreen
@@ -112,8 +113,22 @@ fun RcGearNavHost(
 
         composable<Db> {
             DbScreen(
-                onChassisClick = { chassisId -> navController.navigate(ChassisEdit(chassisId)) }
+                // 同梱エントリは「上書きの編集」、自作エントリは「エントリそのものの編集」。
+                // 行き先が違うので DbScreen 側が id の接頭辞で振り分ける（F-5）
+                onChassisClick = { chassisId -> navController.navigate(ChassisEdit(chassisId)) },
+                onUserChassisClick = { chassisId ->
+                    navController.navigate(UserChassisEdit(chassisId))
+                },
+                onAddChassisClick = { navController.navigate(UserChassisCreate) }
             )
+        }
+
+        composable<UserChassisCreate> {
+            UserChassisEditScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<UserChassisEdit> {
+            UserChassisEditScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable<ChassisEdit> {
