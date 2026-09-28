@@ -1,15 +1,16 @@
 # 引き継ぎ書（HANDOFF）— RcGear Android
 
-> **Status**: MVP 完了 + **セッティングシート化 Phase 0 / Phase 1 / Phase 2（ドメイン再構築）完了**。Phase 3（UI 構築）未着手。
-> **Last Updated**: 2026-09-26
+> **Status**: MVP 完了 + **セッティングシート化 Phase 0 / 1 / 2 / 3 完了**（Phase 3 = UI 構築）。
+> 次は Phase 4（ROADMAP 参照）。**実機確認は未実施**（§7.1）。
+> **Last Updated**: 2026-09-28
 > **対象読者**: 次にこのリポジトリを扱う AI エージェントと、その指示を出す本人。
 >
 > 運用ルールは `AGENTS.md`、機能ロードマップは `ROADMAP.md`、当初計画は `PLAN.md`（凍結）。
 >
-> **このアプリは「ギア比計算機」から「ギア比も計算できるセッティングシート管理アプリ」へ
-> 拡張する途中にある。** ダンパーオイル・スプリング・キャンバー等、実物のセッティングシートに
-> 書く内容を扱えるようにするのが目標。その設計判断（別アプリに分けない／手動移行／
-> フィールド定義は Kotlin レジストリ）は §7 に記録してある。
+> **このアプリは「ギア比計算機」から「ギア比も計算できるセッティングシート管理アプリ」に
+> なった。** ダンパーオイル・スプリング・キャンバー等、実物のセッティングシートに
+> 書く内容を GARAGE タブ（車 → シート）で扱える。設計判断（別アプリに分けない／手動移行／
+> フィールド定義は Kotlin レジストリ）は §5 に記録してある。
 
 ---
 
@@ -17,12 +18,13 @@
 
 | 項目 | 状態 |
 |---|---|
-| 実装範囲 | PLAN Step 1〜12 + Phase 0 / 1 の土台 + **Phase 2（ドメイン再構築）**。画面は CALC / DB / CONFIG の 3 つ（SETUPS は撤去、GARAGE は Phase 3） |
-| 共有 UI | `core/designsystem/component/` に 13 部品（全てに `@Preview`）。文言は `strings.xml`（約 135 件） |
+| 実装範囲 | PLAN Step 1〜12 + Phase 0 / 1 の土台 + Phase 2（ドメイン再構築）+ **Phase 3（UI 構築）**。タブは GARAGE / CALC / DB / CONFIG の 4 つ |
+| 画面 | GARAGE（車一覧 → 車詳細 → シート閲覧 → セクション編集 / ヘッダ編集 / 比較）、CALC、DB（同梱シャーシ + 自作シャーシ）、CONFIG |
+| 共有 UI | `core/designsystem/component/` に 13 部品（全てに `@Preview`）+ `feature/sheet/component/`（`FieldEditor` / `SheetSectionCard`。どちらも `@Preview` 付き）。文言は `strings.xml`（約 330 件） |
 | モジュール | `:app`（Android）＋ `:core:domain`（純 Kotlin JVM） |
 | ビルド | `:app:assembleDebug` / `:app:lintDebug` / `ktlintCheck` 成功（2026-09-26 確認） |
-| 単体テスト | **251 件成功**（`:core:domain` 118 / `:app` 100 + 33）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 |
-| Instrumented / UI テスト | DAO テストを v2 スキーマに更新（15 件）。**Phase 2 では未実行**（エミュレータでの再実行が必要。手順は §6.1） |
+| 単体テスト | **332 件成功**（`:core:domain` 127 / `:app` 205）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 + Phase 3 の ViewModel 8 本とテキスト整形 |
+| Instrumented / UI テスト | DAO テストを v2 スキーマに更新（15 件）。**Phase 2 / 3 では未実行**（エミュレータでの再実行が必要。手順は §6.1） |
 | Lint / 静的解析 | **ktlint 導入済み**（`ktlintCheck` 緑）。Android Lint も CI で実行 |
 | CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**2026-09-26 の PR #1 で初回実行、全ステップ緑**（5m14s）。instrumented テストは CI に入っていない（エミュレータが要るため。§6 参照） |
 | リリース署名 | 未設定。`versionCode = 1`、`versionName = 0.1.0` |
@@ -30,8 +32,8 @@
 | ライセンス | TBD |
 | リモート | `https://github.com/TaskEngineer/rc-gear-calculator.git` |
 | データ | シャーシ 45 エントリ / 9 メーカー、`id` 重複なし（`ChassisDbValidityTest` が固定） |
-| Room | **version 2**（`cars` / `setup_sheets` / `setup_values` / `user_chassis` / `chassis_overrides`） |
-| エクスポート JSON | **schemaVersion 2**（cars / sheets / overrides）。v1 の読み込みは永久に残す |
+| Room | **version 2**（`cars` / `setup_sheets` / `setup_values` / `user_chassis` / `chassis_overrides`）。Phase 3 でスキーマは変えていない |
+| エクスポート JSON | **schemaVersion 2**（cars / sheets / overrides / **userChassis**）。v1 の読み込みは永久に残す。`userChassis` は F-5 で足したキーで、版は上げていない（§5.8） |
 
 ### 1.1 ツールチェイン（実際の値。PLAN.md の記述より新しい）
 
@@ -487,6 +489,107 @@ M-7 で `category` は全 45 件に付けたが、`drive` は裏の取れたも�
 | `saved_setups` を消すと KSP / Hilt の生成物が古いまま残り、`hiltJavaCompileDebug` が消えたクラスを探して落ちる | `app/build/generated/{ksp,hilt}` を消して再ビルドする |
 | 既存 `strings.xml` に `unit_teeth` / `unit_millimeter` / `unit_cells` が既にあった | 新規に作らず共有する。重複定義は `mergeDebugResources` が検出する |
 
+### 5.8 Phase 3 の設計判断（2026-09-28）
+
+Phase 3（G-1 〜 G-7 + F-1 / F-4 / F-5）で決めたこと。実施順は
+G-1 → G-2 → G-3 → G-4 → G-5 → G-6 → G-7 → F-1 → F-5 → F-4。
+**画面を作ってからレジストリを横展開した**（G-7 を最後にした）のは、
+「項目を足しても Composable が増えない」ことをその順序でしか確かめられないため。
+
+#### 新規作成と編集は 1 画面。分岐はルート引数の有無
+
+車（`CarCreate` / `CarEdit`）と自作シャーシ（`UserChassisCreate` / `UserChassisEdit`）は
+同じ Composable・同じ ViewModel を 2 つのルートから開く。違いは「保存が create か update か」と
+「削除を出すか」だけなので、画面を割る理由が無い。
+
+`CarEdit(carId: String? = null)` の 1 ルートにまとめる案は採らなかった。
+型安全ルートの nullable 引数は文字列 `"null"` の扱いに実装依存の癖があり、
+**「新規かどうか」を引数の有無で表すほうが受け取り側も素直**になる
+（`savedStateHandle.carEditRouteOrNull()` が null を返す）。
+CALC の `Calc(sheetId: String? = null)` だけは nullable 引数のままだが、
+あれは U-3 で実機確認済みの形（§5.6）をそのまま戻したもの。
+
+#### シートの値編集は「1 画面 1 セクション」
+
+全項目を 1 画面に並べると、G-7 の横展開後（60 項目超）は目的の欄まで延々スクロールになる。
+シート閲覧のセクションカードをタップ → そのセクションだけの編集画面、という形にした。
+ヘッダ（名前・走行条件・ベースライン）はセクションではないので別画面（`SheetHeaderEdit`）。
+
+#### 不正な入力は「確定しない」
+
+範囲外・数値でない入力は**下書きの文字列として保持し、値は確定しない**。
+確定すると「画面には 999 と出ているのに保存されるのは 40」というズレが生まれる。
+違反が 1 つでもあれば保存ボタン自体を無効にする。
+検証そのものは `:core:domain` の `FieldValidator`（レジストリ駆動）に任せ、
+`:app` は違反を `UiText` にする（`feature/sheet/FieldViolationText.kt`）だけ。
+
+#### 保存は「変わったキーだけ」
+
+EAV（`(sheetId, fieldKey)`）なので 1 項目 1 行の upsert で済む。
+束ごと `replaceValues` すると、編集していないセクションの値を巻き込んで消す危険がある。
+CALC からの書き戻し（G-5）も同じ理由で 5 項目だけを upsert する。
+
+#### `RcDetailScaffold` の「戻る」は 2 つに分かれた
+
+`onNavigateBack`（`ScreenEvent.NavigateBack` を受けたときの処理）と
+`onBackClick`（矢印を押されたときの処理）を分けた。分けないと、未保存確認を
+入れた画面（G-4）で **確認が出続けて画面から出られなくなる**
+（破棄イベント → onNavigateBack → 確認 → …）。既定では両方同じ関数なので、
+他の画面は無改造のまま。
+
+#### 走行結果の「手応え」は値（bag）、ラップタイムはヘッダ
+
+気温やコース名をヘッダに置いたのと同じ線引き（`SetupSheet` の KDoc）だが、
+手応え（進入・クリップ・立ち上がり・グリップ感）は**差分に出したい**ので bag に入れた
+（「前回はアンダー、今回はニュートラル」が軸 B で並ぶ）。
+ベストラップはセッティングの評価ではなくそのセッションの記録なのでヘッダのまま。
+
+#### 差分の左右は表示側で 1 回だけ入れ替える
+
+`SheetDiff` は主役（このシート）を `left`、相手を `right` と呼ぶが、
+画面は「元の値 → 今の値」と読めるほうが自然なので左右が逆になる。
+入れ替えは `SheetCompareScreen.DiffRow` の 1 箇所だけで行い、他では読み替えない。
+
+#### G-7 の受け入れ条件は満たせた
+
+駆動系・タイヤ・ESC・車体・走行結果（約 30 項目）を足したコミット `47b1e5d` が触ったのは
+**`TouringSetupSchema` / `FieldDef` の単位 enum / `strings.xml` / `SetupFieldLabels` の 4 ファイルだけ**で、
+Composable の差分はゼロ。項目追加の手順は AGENTS.md §6 の表のとおり
+（単位を増やすときだけ `FieldUnit` にも 1 行足す）。
+
+#### F-5: `user_` 接頭辞は規約であって飾りではない
+
+自作シャーシの id は Repository が `user_<uuid>` で採番し、画面には触らせない。
+この接頭辞は「同梱 DB と衝突させない」ためだけでなく、
+**インポートの判定**（`isKnownChassis`）と **一覧の振り分け**（自作は別の編集画面へ）も見ている。
+取り込み時に接頭辞を持たない自作シャーシは棄却する — 通すと同梱エントリを
+名前で乗っ取る id が作れてしまう。
+
+同じメーカー名の自作シャーシは既存の見出しに合流させる（「タミヤ」が 2 つ並ばない）。
+エクスポート JSON には `userChassis` キーを**追加**したが **`schemaVersion` は上げない** —
+既存キーの意味を変えていないため（AGENTS.md §4）。古いアプリで読むと自作シャーシの定義だけが
+落ち、それを指す車は「不明なシャーシ」として残る。
+
+#### F-4: `Context` を配らず `Strings` を挟む
+
+テキスト版シートの組み立てはコンポジションの外で走るので `stringResource` が使えない。
+`Context` を直に渡すと**その関数が JVM 単体テストから呼べなくなる**（Robolectric は入れない方針）。
+`core/ui/Strings`（`fun interface`）を 1 段挟み、本番は `Context.asStrings()`、
+テストは id をそのまま返す Fake を渡す。
+`UiText` とは役割が違う — あちらは「文言を運ぶ入れ物」、こちらは「文字列にする関数」。
+
+共有ファイルは `cache/shared/` だけを `FileProvider` に公開する（`res/xml/file_paths.xml`）。
+ルートを公開すると、エクスポート JSON やデータベースまで Uri を組み立てれば読める状態になる。
+
+#### Phase 3 で見つかった、記載の無かった問題
+
+| 内容 | 決着 |
+|---|---|
+| `stateIn(WhileSubscribed)` の `uiState` は **購読者がいないと一度も流れない**。テストで `advanceUntilIdle()` だけ呼んでも初期値のまま | テスト側で `backgroundScope.launch { vm.uiState.collect {} }` を張る（`GarageViewModelTest`） |
+| Material3 の `DatePicker` が返すのは **UTC の 0 時**。そのまま保存すると UTC より西の地域で前日として表示される | 選ばれた日付を端末時間の正午に置き直してから保存する（`SheetHeaderEditViewModel.onDatePicked`） |
+| import を足すと ktlint の並び順違反になりやすく、`assembleDebug` より先に `ktlintCheck` が落ちる | 変更のたびに `ktlintFormat` を挟む。CI の最初のステップと同じ順序で確認する |
+| `RcSlider` は Int 専用。レジストリに小数のスライダー項目を足すと型が合わない | `FieldEditor` が `decimals > 0` のスライダーをステッパーに落とす（現状レジストリに該当は無い） |
+
 ---
 
 ## 6. 運用メモ
@@ -520,7 +623,7 @@ $SDK = "$env:LOCALAPPDATA\Android\Sdk"
 
 ## 7. 動作確認チェックリスト（手動、リリース前）
 
-Phase 2 時点の版に合わせてある。GARAGE / シート系の項目は Phase 3 で足す。
+Phase 3 時点の版。GARAGE / シート系（10〜18）が Phase 3 で入った分。
 
 1. 初回起動: スプラッシュ → CALC、シャーシ未選択でも落ちない
 2. シャーシ選択 → タイヤ径が自動で変わる → スライダー操作 → HUD が即時更新
@@ -531,10 +634,27 @@ Phase 2 時点の版に合わせてある。GARAGE / シート系の項目は Ph
 7. **v1 の JSON をインポート** → 車とシートが作られる（§5.7 の移行手順）
 8. 画面回転・バックグラウンド復帰で入力値が残る
 9. 端末を機内モードにして 1〜8 が動く（オフライン要件）
+10. GARAGE: 車を追加 → 一覧に出る → 編集で名前とシャーシを変えられる → アーカイブで一覧から消え、タブで出る
+11. 車詳細: 「新規シート」でシートが起き、ギアに内部減速比とタイヤ径が焼き込まれている
+12. 「複製」で値が引き継がれ、元シートがベースラインとして一覧に出る
+13. シート閲覧: F/R のグリッドで値が読める。ギアの FDR / 最高速 / ロールアウトが出る
+14. セクションをタップ → 編集 → 範囲外の値でエラーが出て保存ボタンが無効になる →
+    直すと保存できる → 戻ると値が反映されている。未保存で戻ると確認が出る
+15. シートの情報（ヘッダ）: 走行日を選ぶと一覧の並び順が変わる。ベースラインを選べる
+16. 比較: 3 つの軸（キット標準 / ベースライン / 他のシート）が切り替わり、変更点だけが出る
+17. 「CALC で調整する」→ 値が流し込まれる → ピニオンを変えて「このシートに反映」→
+    シートに戻ると更新されている。**内部減速比は変わっていない**
+18. DB: 自作シャーシを追加 → 一覧にメーカー見出し付きで出る → 車に選べる →
+    エクスポート → 全データ削除 → インポートで自作シャーシごと戻る
+19. 共有: シートの共有アイコンでテキストが飛ぶ。CALC の共有 FAB で画像が飛ぶ
 
-### Phase 2 で未実施の確認
+### 7.1 未実施の確認（Phase 2 / 3 から持ち越し）
 
+- **実機 / エミュレータでの動作確認そのもの**。Phase 3 は UI を大量に足したが、
+  すべて JVM 単体テストとビルドまでしか確認していない。
+  特に次は runtime にしか出ない失敗モードがある:
+  - 型安全ルートの nullable 引数（`Calc(sheetId)`）と流し込み遷移（§5.6 の 4 / 5 と同じ手順）
+  - `FileProvider` の authority（debug は `.debug` サフィックス付き）と共有インテント
+  - `DatePicker` の日付が一覧の並び順に効くか
 - **instrumented テスト**（`RcGearDatabaseTest` を v2 スキーマに更新済み、15 件）は
   エミュレータでの再実行が必要。外部キーの CASCADE / SET NULL は JVM テストでは見えない。手順は §6.1
-- 実機での起動確認。Phase 2 は UI をほぼ触っていないが、
-  Room v2 の作り直しは起動時にしか起きないので 1 度は動かすこと

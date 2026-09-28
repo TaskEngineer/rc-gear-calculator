@@ -10,9 +10,10 @@
 - Kotlin 2.0 / Jetpack Compose / Material 3 / Hilt / Room / DataStore / Navigation Compose。
 - `:app`（Android）＋ `:core:domain`（純 Kotlin JVM）の 2 モジュール。
   `:app` 内は引き続きパッケージで疑似分割（`core` / `data` / `feature` / `navigation`）。
-- MVP（Step 1〜12）と Phase 0 / 1 / 2（ドメイン再構築）は完了。次は Phase 3（UI 構築）。
-  **現在アプリの画面は CALC / DB / CONFIG の 3 つ。** 保存セッティング（SETUPS）は
-  車 + セッティングシートに置き換わる途中で、GARAGE は Phase 3 の G-1 で入る。
+- MVP（Step 1〜12）と Phase 0 / 1 / 2（ドメイン再構築）/ 3（UI 構築）は完了。次は Phase 4。
+  **タブは GARAGE / CALC / DB / CONFIG の 4 つ。** GARAGE は 車一覧 → 車詳細（シート一覧）
+  → シート閲覧 → セクション編集 / ヘッダ編集 / 比較 と続く。
+  **実機確認だけ未実施**（`docs/HANDOFF.md` §7.1）。
 - コード内コメント・UI 文言・ドキュメントは **日本語** で統一している。新規コードも日本語コメントで書く。
 
 ## 2. ビルド・テスト（必ずこの手順で）
@@ -129,7 +130,9 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 | やりたいこと | 触る場所 |
 |---|---|
 | 計算式・新メトリック追加 | `:core:domain` の `domain/calculator/GearCalculator.kt` → `domain/model/GearCalculationResult.kt` → `GearCalculatorTest` → `feature/calc/component/GearMetrics.kt`（表示するメトリックの一覧） |
-| **シートの項目を追加** | `domain/schema/TouringSetupSchema.kt` → `res/values/strings.xml` → `feature/sheet/SetupFieldLabels.kt` の 3 箇所だけ。忘れると `SetupFieldLabelsTest` が落ちる |
+| **シートの項目を追加** | `domain/schema/TouringSetupSchema.kt` → `res/values/strings.xml` → `feature/sheet/SetupFieldLabels.kt` の 3 箇所だけ（新しい単位が要るときだけ `FieldDef.kt` の `FieldUnit` にも 1 行）。**Composable は書かない** — 書く必要が出たら設計が壊れた合図。忘れると `SetupFieldLabelsTest` が落ちる |
+| シートの画面を直す | 閲覧 `feature/sheet/SheetDetailScreen.kt`、値の編集 `SheetEditScreen.kt` + `component/FieldEditor.kt`（入力手段の分岐）、ヘッダ編集 `SheetHeaderEditScreen.kt`、比較 `SheetCompareScreen.kt` |
+| 車・ガレージ周り | `feature/garage/`（一覧 `GarageScreen` / 車詳細 `CarDetailScreen` / 車の作成・編集 `CarEditScreen`） |
 | UI 部品を足す / 直す | `core/designsystem/component/`（ドメイン非依存。**必ず `@Preview` を付ける**）。ドメインを知る部品は `core/ui/` |
 | シャーシを追加 | `app/src/main/assets/chassis-db.json`（v2 のフラット配列。`id` は `メーカー_型番` のスネークケース、重複不可。`category` 必須、`drive` は裏が取れたものだけ）。`ChassisDbValidityTest` が既存 id を固定している |
 | 設定項目を追加 | `domain/model/UserPreferences.kt` → `data/local/datastore/UserPreferencesDataSource.kt`（Keys）→ `PreferencesRepository` → `feature/config` |
