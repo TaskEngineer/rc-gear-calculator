@@ -30,12 +30,12 @@ import kotlin.reflect.KClass
 /**
  * CALC 画面（スクラッチパッド計算機）。
  *
- * M-3 で「保存セッティングの流し込み」（引数 `setupId`）を一旦外した。
- * 受け皿だった SETUPS がシートに置き換わるため、Phase 3 の G-5 で
- * `Calc(sheetId: String?)` として入れ直す。その時にルート引数方式（U-3）も戻る。
+ * @property sheetId 流し込む（値を読み込む）シートの id。null = 素のスクラッチパッド。
+ *   ルート引数はバックスタックに載るのでプロセス death を生き延びる（U-3 / G-5）。
+ *   M-3 で一旦外した `setupId` の後継で、受け皿が保存セッティングからシートに変わった。
  */
 @Serializable
-data object Calc
+data class Calc(val sheetId: String? = null)
 
 /** GARAGE 画面（車一覧）。SETUPS の後継（G-1） */
 @Serializable
@@ -108,6 +108,9 @@ data class ChassisEdit(val chassisId: String)
 // その危ない対応関係をルート定義と同じファイルに閉じ込めるのが、この関数群の役目。
 // ============================================================
 
+/** CALC 画面のルート引数を復元する。引数なしで開かれた場合は [Calc.sheetId] が null */
+fun SavedStateHandle.calcRoute(): Calc = Calc(sheetId = get<String>("sheetId"))
+
 /** シャーシ編集画面のルート引数を復元する */
 fun SavedStateHandle.chassisEditRoute(): ChassisEdit =
     ChassisEdit(chassisId = checkNotNull(get<String>("chassisId")))
@@ -177,7 +180,7 @@ enum class TopLevelDestination(
         )
     ),
     CALC(
-        route = Calc,
+        route = Calc(),
         label = "CALC",
         titleRes = R.string.tab_title_calc,
         selectedIcon = Icons.Filled.Speed,

@@ -1,5 +1,6 @@
 package io.github.taskengineer.rcgear.feature.sheet
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -9,6 +10,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,6 +27,9 @@ import io.github.taskengineer.rcgear.core.ui.RcDetailScaffold
 import io.github.taskengineer.rcgear.core.ui.formatDate
 import io.github.taskengineer.rcgear.core.ui.formatDecimals
 import io.github.taskengineer.rcgear.core.ui.formatLapTime
+import io.github.taskengineer.rcgear.core.ui.formatRatio
+import io.github.taskengineer.rcgear.core.ui.formatSpeed
+import io.github.taskengineer.rcgear.domain.model.GearCalculationResult
 import io.github.taskengineer.rcgear.domain.model.SessionConditions
 import io.github.taskengineer.rcgear.domain.schema.TouringSetupSchema
 import io.github.taskengineer.rcgear.feature.sheet.component.SheetSectionCard
@@ -44,6 +49,7 @@ fun SheetDetailScreen(
     onNavigateBack: () -> Unit,
     onEditSectionClick: (sheetId: String, sectionKey: String) -> Unit,
     onEditHeaderClick: (String) -> Unit,
+    onLoadToCalcClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SheetDetailViewModel = hiltViewModel()
 ) {
@@ -122,6 +128,13 @@ fun SheetDetailScreen(
                 traits = state.traits,
                 onEditClick = { onEditSectionClick(state.sheetId, section.key) }
             )
+            // ギアだけは「この値で何km/h 出るか」をその場で出し、CALC への入口も添える（G-5）
+            if (section.key == TouringSetupSchema.GEAR.key) {
+                GearResultCard(
+                    result = state.gearResult,
+                    onOpenCalcClick = { onLoadToCalcClick(state.sheetId) }
+                )
+            }
         }
 
         UnknownValuesCard(values = state.values)
@@ -146,6 +159,43 @@ fun SheetDetailScreen(
                 }
             }
         )
+    }
+}
+
+/**
+ * ギアの計算結果（G-5）。
+ *
+ * シートの値は絶対値のスナップショットなので、シャーシDBを後から編集しても
+ * ここの数字は動かない。CALC で詰めた結果を書き戻す入口もここに置く。
+ */
+@Composable
+private fun GearResultCard(
+    result: GearCalculationResult?,
+    onOpenCalcClick: () -> Unit
+) {
+    RcCard(spacing = 4.dp) {
+        if (result == null) {
+            Text(
+                text = stringResource(R.string.sheet_detail_gear_incomplete),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            LabeledRow(
+                label = stringResource(R.string.metric_fdr),
+                value = result.finalDriveRatio.formatRatio()
+            )
+            LabeledRow(
+                label = stringResource(R.string.metric_top_speed),
+                value = stringResource(R.string.value_kmh, result.topSpeedKmh.formatSpeed())
+            )
+        }
+        OutlinedButton(
+            onClick = onOpenCalcClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.sheet_detail_open_calc))
+        }
     }
 }
 

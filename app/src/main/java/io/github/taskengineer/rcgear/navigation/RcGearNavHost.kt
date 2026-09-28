@@ -35,7 +35,7 @@ fun RcGearNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Calc,
+        startDestination = Calc(),
         modifier = modifier,
         // 画面遷移アニメーション（Step 12）:
         // タブ切替はフェード + わずかな縦スライドで軽快に見せる。
@@ -80,7 +80,17 @@ fun RcGearNavHost(
                 onEditSectionClick = { sheetId, sectionKey ->
                     navController.navigate(SheetEdit(sheetId = sheetId, sectionKey = sectionKey))
                 },
-                onEditHeaderClick = { sheetId -> navController.navigate(SheetHeaderEdit(sheetId)) }
+                onEditHeaderClick = { sheetId -> navController.navigate(SheetHeaderEdit(sheetId)) },
+                onLoadToCalcClick = { sheetId ->
+                    // 「CALC に流し込む」特殊遷移（U-3 / G-5）:
+                    // 値はルート引数で渡し、既存の CALC エントリは inclusive で破棄して置き換える。
+                    // restoreState を付けると保存済みの状態（= 古い引数）が復元されて
+                    // 新しい sheetId が無視される（HANDOFF §5.6）。
+                    navController.navigate(Calc(sheetId = sheetId)) {
+                        popUpTo<Calc> { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 

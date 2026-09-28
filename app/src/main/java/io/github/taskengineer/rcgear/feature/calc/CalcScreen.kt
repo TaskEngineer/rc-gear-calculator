@@ -20,10 +20,13 @@ import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -44,6 +47,7 @@ import io.github.taskengineer.rcgear.core.designsystem.component.MetricsGrid
 import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
 import io.github.taskengineer.rcgear.core.designsystem.component.RcSlider
 import io.github.taskengineer.rcgear.core.ui.ChassisSelectBottomSheet
+import io.github.taskengineer.rcgear.core.ui.asString
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.feature.calc.component.BalanceBar
 import io.github.taskengineer.rcgear.feature.calc.component.ChassisSelectorCard
@@ -82,8 +86,15 @@ fun CalcScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // スナックバーに出すのは画像書き出しの結果だけ。
-    // セッティングの保存は M-3 でシート（GARAGE、Phase 3）に移した
+    // スナックバーに出すのは画像書き出しの結果と、シートへの反映結果（G-5）。
+    val message = state.message
+    if (message != null) {
+        val text = message.asString()
+        LaunchedEffect(message) {
+            snackbarHostState.showSnackbar(text)
+            viewModel.onMessageShown()
+        }
+    }
 
     // ---- 画像エクスポート（Step 12） ----
     // 結果エリアの描画内容を記録する GraphicsLayer。
@@ -135,6 +146,14 @@ fun CalcScreen(
                         selected = state.selectedChassis,
                         onClick = viewModel::onChassisCardClick
                     )
+
+                    // シートから流し込まれて開いた場合だけ、出どころと書き戻し口を出す（G-5）
+                    state.sheetContext?.let { context ->
+                        SheetContextCard(
+                            context = context,
+                            onApplyClick = viewModel::onApplyToSheet
+                        )
+                    }
 
                     SpeedHud(
                         topSpeedKmh = state.result?.topSpeedKmh,
@@ -199,6 +218,43 @@ fun CalcScreen(
             onChassisSelected = viewModel::onChassisSelected,
             onDismiss = viewModel::onChassisSheetDismiss
         )
+    }
+}
+
+/**
+ * 流し込み元のシートを示すカードと、書き戻しボタン（G-5）。
+ *
+ * 書き戻しは「このシートに反映」の 1 タップで確定する（確認を挟まない）。
+ * 上書きするのはギアの 5 項目だけで、シート側の履歴が消えるわけではないため。
+ */
+@Composable
+private fun SheetContextCard(
+    context: CalcSheetContext,
+    onApplyClick: () -> Unit
+) {
+    RcCard(spacing = 4.dp) {
+        Text(
+            text = stringResource(
+                R.string.calc_sheet_context,
+                context.carName,
+                context.sheetName
+            ),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (!context.isComplete) {
+            Text(
+                text = stringResource(R.string.calc_sheet_incomplete),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+        }
+        OutlinedButton(
+            onClick = onApplyClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.calc_apply_to_sheet))
+        }
     }
 }
 

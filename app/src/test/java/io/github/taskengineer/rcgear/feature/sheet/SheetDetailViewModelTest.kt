@@ -7,6 +7,7 @@ import io.github.taskengineer.rcgear.domain.model.SetupValue
 import io.github.taskengineer.rcgear.domain.model.SetupValues
 import io.github.taskengineer.rcgear.fake.FakeCarRepository
 import io.github.taskengineer.rcgear.fake.FakeChassisRepository
+import io.github.taskengineer.rcgear.fake.FakePreferencesRepository
 import io.github.taskengineer.rcgear.fake.FakeSetupSheetRepository
 import io.github.taskengineer.rcgear.testing.MainDispatcherRule
 import kotlinx.coroutines.flow.first
@@ -74,6 +75,44 @@ class SheetDetailViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ScreenEvent.NavigateBack, vm.events.first())
+    }
+
+    @Test
+    fun `load_ギアの値が揃っていれば計算結果も載る`() = runTest {
+        // CALC を開かずにシート上で FDR と最高速が読める（G-5）
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet(
+            carId = CAR_ID,
+            name = "Rd1",
+            values = SetupValues.of(
+                "pinion" to SetupValue.IntV(22),
+                "spur" to SetupValue.IntV(84),
+                "internalRatio" to SetupValue.DecimalV(2.6),
+                "motorKv" to SetupValue.IntV(6500),
+                "cells" to SetupValue.IntV(2),
+                "tireMm" to SetupValue.IntV(63)
+            )
+        )
+        val vm = viewModel(sheets = sheets, sheetId = sheetId)
+        advanceUntilIdle()
+
+        val result = vm.uiState.value.gearResult
+        assertEquals(84.0 / 22.0 * 2.6, result!!.finalDriveRatio, 1e-9)
+    }
+
+    @Test
+    fun `load_ギアの値が欠けていれば計算しない`() = runTest {
+        // 空欄を 0 とみなして計算すると、嘘の最高速が出る
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet(
+            carId = CAR_ID,
+            name = "Rd1",
+            values = SetupValues.of("pinion" to SetupValue.IntV(22))
+        )
+        val vm = viewModel(sheets = sheets, sheetId = sheetId)
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.gearResult)
     }
 
     @Test
@@ -148,7 +187,8 @@ class SheetDetailViewModelTest {
         savedStateHandle = SavedStateHandle(mapOf("sheetId" to sheetId)),
         sheetRepository = sheets,
         carRepository = cars,
-        chassisRepository = FakeChassisRepository()
+        chassisRepository = FakeChassisRepository(),
+        preferencesRepository = FakePreferencesRepository()
     )
 
     private companion object {

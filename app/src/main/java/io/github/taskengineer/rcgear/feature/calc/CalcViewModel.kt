@@ -1,14 +1,22 @@
 package io.github.taskengineer.rcgear.feature.calc
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.taskengineer.rcgear.R
+import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.domain.calculator.GearCalculator
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.domain.model.Maker
+import io.github.taskengineer.rcgear.domain.model.SetupValue
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
+import io.github.taskengineer.rcgear.domain.model.toGearInput
+import io.github.taskengineer.rcgear.domain.repository.CarRepository
 import io.github.taskengineer.rcgear.domain.repository.ChassisRepository
 import io.github.taskengineer.rcgear.domain.repository.PreferencesRepository
+import io.github.taskengineer.rcgear.domain.repository.SetupSheetRepository
+import io.github.taskengineer.rcgear.navigation.calcRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,17 +33,27 @@ import javax.inject.Inject
  * - スライダー入力の状態管理と GearCalculator による再計算
  * - 前回終了時の状態復元（DataStore）と保存
  *
- * シートからの「流し込み」（ルート引数）と保存は M-3 で一旦外した。
- * 受け皿だった SETUPS がシート（GARAGE）に置き換わるため、Phase 3 の G-5 で
- * `Calc(sheetId)` として入れ直す。
+ * ### シートとの双方向連携（G-5）
+ * - **シート → CALC**: ルート引数 `Calc(sheetId)` で開かれたら、そのシートの
+ *   ギアセクションの値を初期値にする。値はシートから読み直す（画面間で状態を運ばない）
+ * - **CALC → シート**: [onApplyToSheet] で現在の入力をそのシートに書き戻す。
+ *   書き戻すのは CALC が持っている 5 項目だけで、内部減速比は触らない
+ *   （CALC では編集できない ＝ シャーシDB由来の値なので、上書きすると
+ *   「シートに焼き込んだ値」を勝手に変えることになる）
  *
  * 計算は純粋関数で 16ms を大きく下回るため、debounce せず入力のたびに同期実行する（PLAN 9.2）。
  */
 @HiltViewModel
 class CalcViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val chassisRepository: ChassisRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val sheetRepository: SetupSheetRepository,
+    private val carRepository: CarRepository
 ) : ViewModel() {
+
+    /** 流し込み元のシート。null なら素のスクラッチパッド（U-3 / G-5） */
+    private val sheetId: String? = savedStateHandle.calcRoute().sheetId
 
     private val _uiState = MutableStateFlow(CalcUiState())
     val uiState: StateFlow<CalcUiState> = _uiState.asStateFlow()
@@ -45,8 +63,13 @@ class CalcViewModel @Inject constructor(
             // 1. 初期値を決めてから DB 購読を始める。
             //    こうすることで「デフォルト値が一瞬見えてから前回値に変わる」チラつきを防ぐ。
             val prefs = preferencesRepository.userPreferences.first()
-            setState { it.withInitialValues(prefs) }
-            val initialChassisId = prefs.lastSelectedChassisId
+            val fed = sheetId?.let { loadSheetValues(it) }
+            setState { state ->
+                val restored = state.withInitialValues(prefs)
+                fed?.applyTo(restored) ?: restored
+            }
+            // シートから来たならそのシャーシを選ぶ。無ければ前回選択を復元する
+            val initialChassisId = fed?.chassisId ?: prefs.lastSelectedChassisId
 
             // 2. シャーシDBを購読。上書きの変更（DB画面での編集）にもリアルタイム追従する。
             chassisRepository.getAllMakers().collect { makers ->
@@ -74,6 +97,62 @@ class CalcViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * 流し込み元のシートを読む。
+     *
+     * 値はシート自身から読み直す（画面から引き渡さない）。ルート引数に載るのは id だけなので、
+     * プロセス death のあとでも同じ結果になる。
+     */
+    private suspend fun loadSheetValues(id: String): SheetFeed? {
+        val sheet = sheetRepository.getSheet(id) ?: return null
+        val car = carRepository.getCar(sheet.sheet.carId)
+        return SheetFeed(
+            sheetId = id,
+            sheetName = sheet.sheet.name,
+            carName = car?.name.orEmpty(),
+            chassisId = car?.chassisId,
+            // 1 項目でも欠けていれば計算入力にならない。その場合は値だけ拾えるものを使う
+            input = sheet.values.toGearInput(),
+            pinion = sheet.values.intOf("pinion"),
+            spur = sheet.values.intOf("spur"),
+            kv = sheet.values.intOf("motorKv"),
+            cells = sheet.values.intOf("cells"),
+            tireMm = sheet.values.intOf("tireMm")
+        )
+    }
+
+    /**
+     * 現在の入力を流し込み元のシートに書き戻す（G-5）。
+     *
+     * 内部減速比は書かない（CALC では編集できず、シャーシDB由来の焼き込み値なので）。
+     * 変わっていない項目も含めて 5 項目を upsert する — EAV なので 1 項目 1 行の
+     * 上書きで済み、差分計算のために元の値を持ち回る必要がない。
+     */
+    fun onApplyToSheet() {
+        val context = _uiState.value.sheetContext ?: return
+        val state = _uiState.value
+        viewModelScope.launch {
+            sheetRepository.setValue(context.sheetId, "pinion", SetupValue.IntV(state.pinion))
+            sheetRepository.setValue(context.sheetId, "spur", SetupValue.IntV(state.spur))
+            sheetRepository.setValue(context.sheetId, "motorKv", SetupValue.IntV(state.kv))
+            sheetRepository.setValue(context.sheetId, "cells", SetupValue.IntV(state.cells))
+            sheetRepository.setValue(context.sheetId, "tireMm", SetupValue.IntV(state.tireMm))
+            _uiState.update {
+                it.copy(
+                    message = UiText.Res(
+                        R.string.calc_applied_to_sheet,
+                        listOf(context.sheetName)
+                    )
+                )
+            }
+        }
+    }
+
+    /** スナックバーを出し終えた */
+    fun onMessageShown() {
+        _uiState.update { it.copy(message = null) }
     }
 
     /**
@@ -205,6 +284,38 @@ class CalcViewModel @Inject constructor(
             cells = cells,
             tireMm = tireMm
         )
+
+    /** 流し込み元のシートから読んだ値。[applyTo] で UiState に載せる */
+    private data class SheetFeed(
+        val sheetId: String,
+        val sheetName: String,
+        val carName: String,
+        val chassisId: String?,
+        val input: GearCalculationInput?,
+        val pinion: Int?,
+        val spur: Int?,
+        val kv: Int?,
+        val cells: Int?,
+        val tireMm: Int?
+    ) {
+        /**
+         * 空欄の項目は前回値（DataStore 由来）を残す。
+         * 0 で埋めると「シートに 0T と書いてある」ように見えてしまう。
+         */
+        fun applyTo(state: CalcUiState): CalcUiState = state.copy(
+            pinion = pinion ?: state.pinion,
+            spur = spur ?: state.spur,
+            kv = kv ?: state.kv,
+            cells = cells ?: state.cells,
+            tireMm = tireMm ?: state.tireMm,
+            sheetContext = CalcSheetContext(
+                sheetId = sheetId,
+                sheetName = sheetName,
+                carName = carName,
+                isComplete = input != null
+            )
+        )
+    }
 
     private fun findChassis(makers: List<Maker>, chassisId: String): SelectedChassis? {
         makers.forEach { maker ->

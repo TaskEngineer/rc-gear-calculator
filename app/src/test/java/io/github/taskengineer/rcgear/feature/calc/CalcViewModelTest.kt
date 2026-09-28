@@ -1,10 +1,18 @@
 package io.github.taskengineer.rcgear.feature.calc
 
+import androidx.lifecycle.SavedStateHandle
+import io.github.taskengineer.rcgear.R
+import io.github.taskengineer.rcgear.core.ui.UiText
+import io.github.taskengineer.rcgear.domain.model.Car
 import io.github.taskengineer.rcgear.domain.model.ChassisOverride
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
+import io.github.taskengineer.rcgear.domain.model.SetupValue
+import io.github.taskengineer.rcgear.domain.model.SetupValues
 import io.github.taskengineer.rcgear.domain.model.UserPreferences
+import io.github.taskengineer.rcgear.fake.FakeCarRepository
 import io.github.taskengineer.rcgear.fake.FakeChassisRepository
 import io.github.taskengineer.rcgear.fake.FakePreferencesRepository
+import io.github.taskengineer.rcgear.fake.FakeSetupSheetRepository
 import io.github.taskengineer.rcgear.testing.MainDispatcherRule
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -26,8 +34,8 @@ import org.junit.Test
  *
  * メソッド名のプレフィクスでカテゴリを表現 (init_, chassis_, slider_, clamp_, prefs_)。
  *
- * M-3 でシートからの流し込み（request_）と保存（save_）のテストは外した。
- * 受け皿がシート（GARAGE）に置き換わるので、Phase 3 の G-5 で入れ直す。
+ * G-5 でシートとの往復（feed_ / apply_）が入った。ここで守りたいのは
+ * 「シートに無い項目で 0 埋めしない」「書き戻すのはギアの 5 項目だけ」。
  */
 class CalcViewModelTest {
 
@@ -244,17 +252,143 @@ class CalcViewModelTest {
         assertTrue("基準を変えたのにバーが動かない", vm.uiState.value.result!!.balanceIndicatorPct != before)
     }
 
+    // ----- feed_: シート → CALC（G-5） -----
+
+    @Test
+    fun `feed_シートの値と車のシャーシが載る`() = runTest {
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet(
+            carId = "car-1",
+            name = "Rd1",
+            values = SetupValues.of(
+                "pinion" to SetupValue.IntV(30),
+                "spur" to SetupValue.IntV(90),
+                "motorKv" to SetupValue.IntV(7500),
+                "cells" to SetupValue.IntV(3),
+                "tireMm" to SetupValue.IntV(60),
+                "internalRatio" to SetupValue.DecimalV(2.6)
+            )
+        )
+        val vm = viewModel(sheetRepository = sheets, sheetId = sheetId)
+        advanceUntilIdle()
+
+        with(vm.uiState.value) {
+            assertEquals(30, pinion)
+            assertEquals(90, spur)
+            assertEquals(7500, kv)
+            assertEquals(3, cells)
+            assertEquals(60, tireMm)
+            assertEquals("tamiya_tt02", selectedChassis?.chassis?.id)
+            assertEquals("Rd1", sheetContext?.sheetName)
+            assertTrue(sheetContext?.isComplete == true)
+            assertNotNull(result)
+        }
+    }
+
+    @Test
+    fun `feed_シートに無い項目は前回値のまま残る`() = runTest {
+        // 0 で埋めると「シートに 0T と書いてある」ように見えてしまう
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet(
+            carId = "car-1",
+            name = "Rd1",
+            values = SetupValues.of("pinion" to SetupValue.IntV(30))
+        )
+        val vm = viewModel(
+            prefs = UserPreferences(lastSpur = 88),
+            sheetRepository = sheets,
+            sheetId = sheetId
+        )
+        advanceUntilIdle()
+
+        assertEquals(30, vm.uiState.value.pinion)
+        assertEquals(88, vm.uiState.value.spur)
+        assertEquals("値が欠けている", false, vm.uiState.value.sheetContext?.isComplete)
+    }
+
+    @Test
+    fun `feed_引数が無ければ素のスクラッチパッドとして開く`() = runTest {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.sheetContext)
+    }
+
+    // ----- apply_: CALC → シート（G-5） -----
+
+    @Test
+    fun `apply_ギアの 5 項目だけ書き戻す`() = runTest {
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet(
+            carId = "car-1",
+            name = "Rd1",
+            values = SetupValues.of(
+                "pinion" to SetupValue.IntV(22),
+                "internalRatio" to SetupValue.DecimalV(2.6),
+                "front.camberDeg" to SetupValue.DecimalV(-2.0)
+            )
+        )
+        val vm = viewModel(sheetRepository = sheets, sheetId = sheetId)
+        advanceUntilIdle()
+
+        vm.onPinionChange(34)
+        vm.onApplyToSheet()
+        advanceUntilIdle()
+
+        val saved = sheets.stored.single().values
+        assertEquals(34, saved.intOf("pinion"))
+        // CALC が触らない値は残る（内部減速比はシャーシDB由来の焼き込み値）
+        assertEquals(2.6, saved.decimalOf("internalRatio")!!, 1e-9)
+        assertEquals(-2.0, saved.decimalOf("front.camberDeg")!!, 1e-9)
+        assertEquals(
+            UiText.Res(R.string.calc_applied_to_sheet, listOf("Rd1")),
+            vm.uiState.value.message
+        )
+    }
+
+    @Test
+    fun `apply_シート文脈が無ければ何もしない`() = runTest {
+        val sheets = FakeSetupSheetRepository()
+        sheets.createSheet(carId = "car-1", name = "Rd1", values = SetupValues.EMPTY)
+        val vm = viewModel(sheetRepository = sheets)
+        advanceUntilIdle()
+
+        vm.onApplyToSheet()
+        advanceUntilIdle()
+
+        assertTrue(sheets.stored.single().values.isEmpty())
+        assertNull(vm.uiState.value.message)
+    }
+
     // ----- ヘルパー -----
 
     private fun viewModel(
         chassisRepository: FakeChassisRepository = this.chassisRepository,
         preferencesRepository: FakePreferencesRepository = FakePreferencesRepository(),
-        prefs: UserPreferences? = null
+        prefs: UserPreferences? = null,
+        sheetRepository: FakeSetupSheetRepository = FakeSetupSheetRepository(),
+        carRepository: FakeCarRepository = FakeCarRepository(initial = listOf(CAR)),
+        sheetId: String? = null
     ): CalcViewModel {
         val preferences = prefs?.let { FakePreferencesRepository(it) } ?: preferencesRepository
         return CalcViewModel(
+            savedStateHandle = SavedStateHandle(
+                if (sheetId == null) emptyMap() else mapOf("sheetId" to sheetId)
+            ),
             chassisRepository = chassisRepository,
-            preferencesRepository = preferences
+            preferencesRepository = preferences,
+            sheetRepository = sheetRepository,
+            carRepository = carRepository
+        )
+    }
+
+    private companion object {
+        val CAR = Car(
+            id = "car-1",
+            name = "TT-02 #1",
+            chassisId = "tamiya_tt02",
+            createdAt = 1_000L,
+            updatedAt = 1_000L
         )
     }
 }
