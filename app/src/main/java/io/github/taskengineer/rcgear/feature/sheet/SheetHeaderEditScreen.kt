@@ -78,10 +78,12 @@ fun SheetHeaderEditScreen(
                 onValueChange = viewModel::onSurfaceChange,
                 hint = stringResource(R.string.sheet_header_surface_hint)
             )
+            // エラーは入力のたびに欄の下へ出す（BUG-7 と同じ規約）
             RcNumberField(
                 label = stringResource(R.string.sheet_field_air_temp),
                 value = state.airTempInput,
                 onValueChange = viewModel::onAirTempChange,
+                error = state.airTempError?.asString(),
                 decimal = true,
                 unit = stringResource(R.string.unit_celsius)
             )
@@ -89,6 +91,7 @@ fun SheetHeaderEditScreen(
                 label = stringResource(R.string.sheet_field_track_temp),
                 value = state.trackTempInput,
                 onValueChange = viewModel::onTrackTempChange,
+                error = state.trackTempError?.asString(),
                 decimal = true,
                 unit = stringResource(R.string.unit_celsius)
             )
@@ -96,12 +99,14 @@ fun SheetHeaderEditScreen(
                 label = stringResource(R.string.sheet_field_humidity),
                 value = state.humidityInput,
                 onValueChange = viewModel::onHumidityChange,
+                error = state.humidityError?.asString(),
                 unit = stringResource(R.string.unit_percent)
             )
             RcNumberField(
                 label = stringResource(R.string.sheet_field_best_lap),
                 value = state.bestLapInput,
                 onValueChange = viewModel::onBestLapChange,
+                error = state.bestLapError?.asString(),
                 decimal = true,
                 unit = stringResource(R.string.unit_second)
             )
@@ -129,16 +134,9 @@ fun SheetHeaderEditScreen(
             singleLine = false
         )
 
-        state.errorMessage?.let {
-            Text(
-                text = it.asString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
         Button(
             onClick = viewModel::onSave,
+            enabled = state.canSave,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(stringResource(R.string.action_save))

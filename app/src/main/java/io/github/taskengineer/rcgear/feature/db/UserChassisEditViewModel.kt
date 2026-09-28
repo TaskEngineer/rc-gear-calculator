@@ -66,17 +66,23 @@ class UserChassisEditViewModel @Inject constructor(
                 return@launch
             }
             editing = loaded
+            // 読み込んだ値も検証に通す。範囲外の値が入っていたら開いた時点でエラーを出す
+            // （出さないと「触っていないのに保存できる」状態が残る）
+            val ratioInput = loaded.internalRatio.formatRatio()
+            val tireInput = loaded.defaultTireMm.toString()
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     makerInput = loaded.makerName,
                     nameInput = loaded.name,
-                    ratioInput = loaded.internalRatio.formatRatio(),
-                    tireInput = loaded.defaultTireMm.toString(),
+                    ratioInput = ratioInput,
+                    tireInput = tireInput,
                     noteInput = loaded.note.orEmpty(),
                     category = loaded.category,
                     drive = loaded.traits.drive,
-                    hasCenterDiff = loaded.traits.hasCenterDiff
+                    hasCenterDiff = loaded.traits.hasCenterDiff,
+                    ratioError = ratioErrorOf(ratioInput),
+                    tireError = tireErrorOf(tireInput)
                 )
             }
         }
@@ -88,9 +94,13 @@ class UserChassisEditViewModel @Inject constructor(
 
     fun onNameChange(value: String) = update { copy(nameInput = value) }
 
-    fun onRatioChange(value: String) = update { copy(ratioInput = value) }
+    fun onRatioChange(value: String) = update {
+        copy(ratioInput = value, ratioError = ratioErrorOf(value))
+    }
 
-    fun onTireChange(value: String) = update { copy(tireInput = value) }
+    fun onTireChange(value: String) = update {
+        copy(tireInput = value, tireError = tireErrorOf(value))
+    }
 
     fun onNoteChange(value: String) = update { copy(noteInput = value) }
 
@@ -105,31 +115,12 @@ class UserChassisEditViewModel @Inject constructor(
 
     fun onSave() {
         val state = _uiState.value
+        // 画面側もボタンを無効にしているが、ここでも止める（最後の関所）
+        if (!state.canSave) return
         val name = state.nameInput.trim()
-        if (name.isEmpty()) {
-            setError(UiText.Res(R.string.user_chassis_error_name))
-            return
-        }
         val maker = state.makerInput.trim()
-        if (maker.isEmpty()) {
-            setError(UiText.Res(R.string.user_chassis_error_maker))
-            return
-        }
-        val ratio = state.ratioInput.trim().toDoubleOrNull()
-        if (ratio == null || !GearCalculationInput.isValidInternalRatio(ratio)) {
-            setError(UiText.Res(R.string.chassis_edit_error_internal_ratio))
-            return
-        }
-        val tire = state.tireInput.trim().toIntOrNull()
-        if (tire == null || tire !in GearCalculationInput.TIRE_MM_RANGE) {
-            setError(
-                UiText.Res(
-                    R.string.chassis_edit_error_tire_mm,
-                    listOf(GearCalculationInput.MIN_TIRE_MM, GearCalculationInput.MAX_TIRE_MM)
-                )
-            )
-            return
-        }
+        val ratio = state.ratioInput.trim().toDoubleOrNull() ?: return
+        val tire = state.tireInput.trim().toIntOrNull() ?: return
 
         val draft = UserChassis(
             // 新規の id と時刻は Repository が入れる。ここで作った値は使われない
@@ -174,11 +165,38 @@ class UserChassisEditViewModel @Inject constructor(
     // ----- 内部 -----
 
     private fun update(transform: UserChassisEditUiState.() -> UserChassisEditUiState) {
-        _uiState.update { it.transform().copy(errorMessage = null) }
+        _uiState.update { it.transform() }
     }
 
-    private fun setError(message: UiText) {
-        _uiState.update { it.copy(errorMessage = message) }
+    /**
+     * 入力のたびに走る検証（BUG-7。[ChassisEditViewModel] と同じ規則）。
+     * 空欄はエラーにしない — 打ち直しの途中で赤くなるのは煩わしく、
+     * 空のまま保存されないことは [UserChassisEditUiState.canSave] が担保する。
+     */
+    private fun ratioErrorOf(text: String): UiText? {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return null
+        val ratio = trimmed.toDoubleOrNull()
+        return if (ratio == null || !GearCalculationInput.isValidInternalRatio(ratio)) {
+            UiText.Res(R.string.chassis_edit_error_internal_ratio)
+        } else {
+            null
+        }
+    }
+
+    /** タイヤ径版。[ratioErrorOf] と同じ規則 */
+    private fun tireErrorOf(text: String): UiText? {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return null
+        val tire = trimmed.toIntOrNull()
+        return if (tire == null || tire !in GearCalculationInput.TIRE_MM_RANGE) {
+            UiText.Res(
+                R.string.chassis_edit_error_tire_mm,
+                listOf(GearCalculationInput.MIN_TIRE_MM, GearCalculationInput.MAX_TIRE_MM)
+            )
+        } else {
+            null
+        }
     }
 }
 
@@ -198,6 +216,18 @@ data class UserChassisEditUiState(
     val category: ChassisCategory = ChassisCategory.TOURING,
     val drive: ChassisDrive? = null,
     val hasCenterDiff: Boolean? = null,
-    val errorMessage: UiText? = null,
+    val ratioError: UiText? = null,
+    val tireError: UiText? = null,
     val showDeleteConfirm: Boolean = false
-)
+) {
+    /**
+     * 保存できるか（BUG-7 と同じ規約。HANDOFF §5.9）。
+     *
+     * メーカー名と名前は自由文字列なので「不正」が無く、埋まっているかだけを見る。
+     * 内部減速比とタイヤ径は範囲があるので [ratioError] / [tireError] も見る。
+     */
+    val canSave: Boolean
+        get() = ratioError == null && tireError == null &&
+            makerInput.isNotBlank() && nameInput.isNotBlank() &&
+            ratioInput.isNotBlank() && tireInput.isNotBlank()
+}

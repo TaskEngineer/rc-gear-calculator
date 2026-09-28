@@ -75,37 +75,57 @@ class UserChassisEditViewModelTest {
     }
 
     @Test
-    fun `create_名前が空なら保存しない`() = runTest {
+    fun `input_名前が空なら保存できない`() = runTest {
+        // BUG-7 の横展開。押してから弾くのではなく、埋まるまで押させない
         val chassis = FakeChassisRepository()
         val vm = viewModel(chassis)
         advanceUntilIdle()
 
         vm.onMakerChange("XRAY")
+
+        assertFalse(vm.uiState.value.canSave)
+
         vm.onSave()
         advanceUntilIdle()
-
         assertTrue(chassis.getAllUserChassisOnce().isEmpty())
-        assertEquals(UiText.Res(R.string.user_chassis_error_name), vm.uiState.value.errorMessage)
     }
 
     @Test
-    fun `create_内部減速比が範囲外なら保存しない`() = runTest {
+    fun `input_内部減速比は入力した時点でエラーになる`() = runTest {
         val chassis = FakeChassisRepository()
         val vm = viewModel(chassis)
         advanceUntilIdle()
 
         vm.onMakerChange("XRAY")
         vm.onNameChange("X4")
-        vm.onRatioChange("0")
         vm.onTireChange("62")
-        vm.onSave()
-        advanceUntilIdle()
+        vm.onRatioChange("0")
 
-        assertTrue(chassis.getAllUserChassisOnce().isEmpty())
+        // 保存を押す前にエラーが出ていること
         assertEquals(
             UiText.Res(R.string.chassis_edit_error_internal_ratio),
-            vm.uiState.value.errorMessage
+            vm.uiState.value.ratioError
         )
+        assertFalse(vm.uiState.value.canSave)
+
+        vm.onSave()
+        advanceUntilIdle()
+        assertTrue(chassis.getAllUserChassisOnce().isEmpty())
+    }
+
+    @Test
+    fun `input_直すとエラーが消えて保存できるようになる`() = runTest {
+        val vm = viewModel(FakeChassisRepository())
+        advanceUntilIdle()
+        vm.onMakerChange("XRAY")
+        vm.onNameChange("X4")
+        vm.onTireChange("62")
+        vm.onRatioChange("0")
+
+        vm.onRatioChange("1.0")
+
+        assertNull(vm.uiState.value.ratioError)
+        assertTrue(vm.uiState.value.canSave)
     }
 
     @Test

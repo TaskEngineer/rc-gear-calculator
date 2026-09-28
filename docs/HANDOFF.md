@@ -24,7 +24,7 @@
 | 共有 UI | `core/designsystem/component/` に 13 部品（全てに `@Preview`）+ `feature/sheet/component/`（`FieldEditor` / `SheetSectionCard`。どちらも `@Preview` 付き）。文言は `strings.xml`（約 330 件） |
 | モジュール | `:app`（Android）＋ `:core:domain`（純 Kotlin JVM） |
 | ビルド | `:app:assembleDebug` / `:app:lintDebug` / `ktlintCheck` 成功（2026-09-26 確認） |
-| 単体テスト | **348 件成功**（`:core:domain` 127 / `:app` 221）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 + Phase 3 の ViewModel 9 本とテキスト整形 + BUG-6 の回帰 5 件 + BUG-7 の `ChassisEditViewModelTest` 11 件 |
+| 単体テスト | **351 件成功**（`:core:domain` 127 / `:app` 224）。レジストリ・値の検証・差分・v1→v2 変換・エクスポート往復・Repository 契約・シャーシ DB の妥当性 + Phase 3 の ViewModel 9 本とテキスト整形 + BUG-6 の回帰 5 件 + BUG-7 と §5.9 の横展開（編集画面 5 つの検証）|
 | Instrumented / UI テスト | **24 件、全件成功**（2026-09-28）。DAO テスト 17 件 + `SetupSheetRepositoryImpl` 7 件（BUG-6）。DAO 側はエミュレータ Pixel_8（API 34）と実機 SO-53C（Android 14 / API 34 / 720x1496）の両方で、Repository 側は Pixel_8 で実行。手順は §6.1 |
 | Lint / 静的解析 | **ktlint 導入済み**（`ktlintCheck` 緑）。Android Lint も CI で実行 |
 | CI | 設定済み（`.github/workflows/ci.yml`: ktlint → domain test → test → assemble → lint）。**2026-09-26 の PR #1 で初回実行、全ステップ緑**（5m14s）。instrumented テストは CI に入っていない（エミュレータが要るため。§6 参照） |
@@ -181,9 +181,9 @@ android.database.sqlite.SQLiteConstraintException: FOREIGN KEY constraint failed
 - 確認: エミュレータ Pixel_8 で DB → TT-02 → タイヤ径に `200` を入力 →
   **その場で欄が赤くなり「タイヤ径は 40〜120mm の整数で入力してください」が出て、保存が押せない**。
   `65` に直すとエラーが消えて保存が有効に戻ることまで確認。
-- **残っている同型の画面**: `UserChassisEditViewModel` / `CarEditViewModel` /
-  `SheetHeaderEditViewModel` も「保存時にまとめて 1 件ずつ」の古い形のまま。
-  落ちも不正値の混入も起きないので BUG にはしていないが、`ROADMAP.md` の Phase 3.5 に載せた。
+- **同型だった他の 3 画面も同日に揃えた**: `UserChassisEditViewModel` / `CarEditViewModel` /
+  `SheetHeaderEditViewModel`。編集画面が 6 つある中で検証のやり方が 2 通りに割れていたのが
+  問題の本体なので、規約として §5.9 に書き出した。**新しい編集画面もこの形に従うこと。**
 
 ---
 
@@ -670,6 +670,36 @@ Composable の差分はゼロ。項目追加の手順は AGENTS.md §6 の表の
 | Material3 の `DatePicker` が返すのは **UTC の 0 時**。そのまま保存すると UTC より西の地域で前日として表示される | 選ばれた日付を端末時間の正午に置き直してから保存する（`SheetHeaderEditViewModel.onDatePicked`） |
 | import を足すと ktlint の並び順違反になりやすく、`assembleDebug` より先に `ktlintCheck` が落ちる | 変更のたびに `ktlintFormat` を挟む。CI の最初のステップと同じ順序で確認する |
 | `RcSlider` は Int 専用。レジストリに小数のスライダー項目を足すと型が合わない | `FieldEditor` が `decimals > 0` のスライダーをステッパーに落とす（現状レジストリに該当は無い） |
+
+### 5.9 入力フォームの検証規約（2026-09-28。BUG-7 とその横展開）
+
+編集画面が 6 つになった時点で、**検証のやり方が 2 通りに割れていた**。
+`SheetEditScreen`（シートの値）だけが入力のたびに検証し、残り 4 つは
+保存ボタンを押してから違反を 1 件ずつ出していた。同じアプリの中で
+「入力した瞬間に赤くなる画面」と「押すまで何も言わない画面」が混ざるのは、
+どちらが正しいかという話の前に一貫していないことが問題なので、
+**入力のたび**に揃えた。規約は次の 4 つ。
+
+1. **検証は入力のたび。** `onXxxChange` が値と一緒にその項目のエラーを埋める。
+   エラーは項目ごとの `xxxError: UiText?` に持ち、画面は `RcNumberField(error = ...)` /
+   `RcTextField(error = ...)` で**欄の下**に出す。画面下部に 1 件だけ出す
+   `errorMessage` は廃止した（どの欄の話か分からないため）。
+2. **`canSave` は UiState が計算する。** エラーが 1 つでも残っていれば false。
+   画面は保存ボタンの `enabled` に渡し、ViewModel の `onSave()` も先頭で
+   `if (!state.canSave) return` と二重に止める（画面を経由しない呼び出しへの備え）。
+3. **空欄はエラーにしない。** 消して打ち直している最中に赤くなるのは煩わしく、
+   「まだ入力していない」は違反ではない。必須項目が空のまま保存されないことは
+   `canSave` 側（`isNotBlank()`）が担保する。任意項目（走行条件）は空欄のままでも保存できる。
+4. **読み込んだ値も init で検証に通す。** 取り込んだ JSON や古いデータに範囲外の値が
+   入っていた場合、開いた時点でエラーが出ていないと「触っていないのに保存できる」状態が残る。
+
+「入力できるが不正」な状態が無い項目（車の名前、メーカー名のような自由文字列、
+一覧から選ぶシャーシ）には**エラー文を持たせない**。`canSave` が false になるだけで、
+何が足りないかは欄が空であることとヒント文で分かる。
+このため `car_edit_error_name` など 4 つの文言は使わなくなったので削除した。
+
+対象は `SheetEdit` / `ChassisEdit` / `UserChassisEdit` / `CarEdit` / `SheetHeaderEdit` の 5 画面。
+**新しい編集画面を足すときもこの形に従うこと。**
 
 ---
 

@@ -20,7 +20,6 @@ import io.github.taskengineer.rcgear.core.designsystem.component.RcTextField
 import io.github.taskengineer.rcgear.core.designsystem.component.SwitchRow
 import io.github.taskengineer.rcgear.core.ui.ChassisSelectBottomSheet
 import io.github.taskengineer.rcgear.core.ui.RcDetailScaffold
-import io.github.taskengineer.rcgear.core.ui.asString
 
 /**
  * 車の新規作成・編集画面（G-1）。
@@ -96,16 +95,10 @@ fun CarEditScreen(
             )
         }
 
-        state.errorMessage?.let {
-            Text(
-                text = it.asString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
+        // 必須（名前・シャーシ）が埋まるまで保存させない（BUG-7 と同じ規約）
         Button(
             onClick = viewModel::onSave,
+            enabled = state.canSave,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(stringResource(R.string.action_save))

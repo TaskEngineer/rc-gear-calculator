@@ -116,8 +116,6 @@
     <string name="user_chassis_yes">あり</string>
     <string name="user_chassis_no">なし</string>
     <string name="user_chassis_traits_hint">駆動方式とセンターデフは、シートに出す項目（ベルトテンション・デフオイル）の出し分けに使います。不明のままなら全て出ます。</string>
-    <string name="user_chassis_error_name">シャーシ名を入力してください</string>
-    <string name="user_chassis_error_maker">メーカー名を入力してください</string>
     <string name="user_chassis_delete">このシャーシを削除</string>
     <string name="user_chassis_delete_confirm_title">シャーシを削除しますか？</string>
     <string name="user_chassis_delete_confirm_text">「%1$s」を削除します。このシャーシを使っている車は残りますが、シャーシ名が出なくなります。</string>
@@ -192,8 +190,6 @@
     <string name="car_edit_note">備考</string>
     <string name="car_edit_archive">アーカイブする</string>
     <string name="car_edit_archive_hint">一覧から隠すだけで、シートは残る</string>
-    <string name="car_edit_error_name">名前を入力してください</string>
-    <string name="car_edit_error_chassis">シャーシを選んでください</string>
     <string name="car_edit_delete">この車を削除</string>
     <string name="car_edit_delete_confirm_title">車を削除しますか？</string>
     <string name="car_edit_delete_confirm_text">「%1$s」と、この車のセッティングシートをすべて削除します。取り消せません。</string>

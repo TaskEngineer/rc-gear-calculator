@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -101,56 +102,72 @@ class SheetHeaderEditViewModelTest {
     }
 
     @Test
-    fun `save_名前が空なら保存しない`() = runTest {
+    fun `input_名前が空なら保存できない`() = runTest {
+        // BUG-7 の横展開。押してから弾くのではなく、埋まるまで押させない
         val sheets = FakeSetupSheetRepository()
         val sheetId = sheets.createSheet(carId = CAR_ID, name = "Rd1", values = SetupValues.EMPTY)
         val vm = viewModel(sheets, sheetId)
         advanceUntilIdle()
 
         vm.onNameChange("   ")
+
+        assertFalse(vm.uiState.value.canSave)
+
         vm.onSave()
         advanceUntilIdle()
-
         assertEquals("Rd1", sheets.stored.single().sheet.name)
-        assertEquals(
-            UiText.Res(R.string.car_detail_error_sheet_name),
-            vm.uiState.value.errorMessage
-        )
     }
 
     @Test
-    fun `save_範囲外の気温はエラーにして保存しない`() = runTest {
+    fun `input_範囲外の気温は入力した時点でエラーになる`() = runTest {
         val sheets = FakeSetupSheetRepository()
         val sheetId = sheets.createSheet(carId = CAR_ID, name = "Rd1", values = SetupValues.EMPTY)
         val vm = viewModel(sheets, sheetId)
         advanceUntilIdle()
 
         vm.onAirTempChange("300")
-        vm.onSave()
-        advanceUntilIdle()
 
-        assertNull(sheets.stored.single().sheet.conditions.airTempC)
+        // 保存を押す前にエラーが出ていること
         assertEquals(
             UiText.Res(R.string.sheet_header_error_air_temp),
-            vm.uiState.value.errorMessage
+            vm.uiState.value.airTempError
         )
+        assertFalse(vm.uiState.value.canSave)
+
+        vm.onSave()
+        advanceUntilIdle()
+        assertNull(sheets.stored.single().sheet.conditions.airTempC)
     }
 
     @Test
-    fun `save_数値でないラップタイムはエラーにする`() = runTest {
+    fun `input_数値でないラップタイムもその場でエラーになる`() = runTest {
         val sheets = FakeSetupSheetRepository()
         val sheetId = sheets.createSheet(carId = CAR_ID, name = "Rd1", values = SetupValues.EMPTY)
         val vm = viewModel(sheets, sheetId)
         advanceUntilIdle()
 
         vm.onBestLapChange("12.3.4")
-        vm.onSave()
-        advanceUntilIdle()
 
         assertEquals(
             UiText.Res(R.string.sheet_header_error_best_lap),
-            vm.uiState.value.errorMessage
+            vm.uiState.value.bestLapError
         )
+        assertFalse(vm.uiState.value.canSave)
+    }
+
+    @Test
+    fun `input_走行条件は任意なので空欄のままでも保存できる`() = runTest {
+        // 走行条件に必須は無い。空欄を違反にすると何も入力せずに閉じられなくなる
+        val sheets = FakeSetupSheetRepository()
+        val sheetId = sheets.createSheet(carId = CAR_ID, name = "Rd1", values = SetupValues.EMPTY)
+        val vm = viewModel(sheets, sheetId)
+        advanceUntilIdle()
+
+        vm.onAirTempChange("300")
+        vm.onAirTempChange("")
+
+        assertNull(vm.uiState.value.airTempError)
+        assertTrue(vm.uiState.value.canSave)
     }
 
     @Test

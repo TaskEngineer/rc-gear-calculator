@@ -1,5 +1,6 @@
 package io.github.taskengineer.rcgear.feature.sheet
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -69,6 +70,12 @@ class SheetHeaderEditViewModel @Inject constructor(
                 .filter { it.id != sheetId }
                 .map { BaselineCandidate(id = it.id, name = it.name) }
             val conditions = loaded.sheet.conditions
+            // 読み込んだ値も検証に通す。取り込んだデータに範囲外の値が入っていた場合、
+            // 開いた時点でエラーが出ていないと「触っていないのに保存できる」状態が残る
+            val airTemp = conditions.airTempC?.toString().orEmpty()
+            val trackTemp = conditions.trackTempC?.toString().orEmpty()
+            val humidity = conditions.humidityPct?.toString().orEmpty()
+            val bestLap = conditions.bestLapMs?.let { ms -> (ms / 1000.0).toString() }.orEmpty()
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -76,13 +83,21 @@ class SheetHeaderEditViewModel @Inject constructor(
                     sessionDate = conditions.sessionDate,
                     trackInput = conditions.trackName.orEmpty(),
                     surfaceInput = conditions.surface.orEmpty(),
-                    airTempInput = conditions.airTempC?.toString().orEmpty(),
-                    trackTempInput = conditions.trackTempC?.toString().orEmpty(),
-                    humidityInput = conditions.humidityPct?.toString().orEmpty(),
-                    bestLapInput = conditions.bestLapMs?.let { ms -> (ms / 1000.0).toString() }.orEmpty(),
+                    airTempInput = airTemp,
+                    trackTempInput = trackTemp,
+                    humidityInput = humidity,
+                    bestLapInput = bestLap,
                     noteInput = loaded.sheet.note.orEmpty(),
                     baselineId = loaded.sheet.baselineId,
-                    baselineCandidates = candidates
+                    baselineCandidates = candidates,
+                    airTempError = errorOf(airTemp, Limits.AIR_TEMP, R.string.sheet_header_error_air_temp),
+                    trackTempError = errorOf(
+                        trackTemp,
+                        Limits.TRACK_TEMP,
+                        R.string.sheet_header_error_track_temp
+                    ),
+                    humidityError = errorOf(humidity, Limits.HUMIDITY, R.string.sheet_header_error_humidity),
+                    bestLapError = errorOf(bestLap, Limits.BEST_LAP_SEC, R.string.sheet_header_error_best_lap)
                 )
             }
         }
@@ -96,13 +111,33 @@ class SheetHeaderEditViewModel @Inject constructor(
 
     fun onSurfaceChange(value: String) = update { copy(surfaceInput = value) }
 
-    fun onAirTempChange(value: String) = update { copy(airTempInput = value) }
+    fun onAirTempChange(value: String) = update {
+        copy(
+            airTempInput = value,
+            airTempError = errorOf(value, Limits.AIR_TEMP, R.string.sheet_header_error_air_temp)
+        )
+    }
 
-    fun onTrackTempChange(value: String) = update { copy(trackTempInput = value) }
+    fun onTrackTempChange(value: String) = update {
+        copy(
+            trackTempInput = value,
+            trackTempError = errorOf(value, Limits.TRACK_TEMP, R.string.sheet_header_error_track_temp)
+        )
+    }
 
-    fun onHumidityChange(value: String) = update { copy(humidityInput = value) }
+    fun onHumidityChange(value: String) = update {
+        copy(
+            humidityInput = value,
+            humidityError = errorOf(value, Limits.HUMIDITY, R.string.sheet_header_error_humidity)
+        )
+    }
 
-    fun onBestLapChange(value: String) = update { copy(bestLapInput = value) }
+    fun onBestLapChange(value: String) = update {
+        copy(
+            bestLapInput = value,
+            bestLapError = errorOf(value, Limits.BEST_LAP_SEC, R.string.sheet_header_error_best_lap)
+        )
+    }
 
     fun onNoteChange(value: String) = update { copy(noteInput = value) }
 
@@ -132,19 +167,13 @@ class SheetHeaderEditViewModel @Inject constructor(
     fun onSave() {
         val state = _uiState.value
         val current = sheet ?: return
+        // 画面側もボタンを無効にしているが、ここでも止める（最後の関所）
+        if (!state.canSave) return
         val name = state.nameInput.trim()
-        if (name.isEmpty()) {
-            setError(UiText.Res(R.string.car_detail_error_sheet_name))
-            return
-        }
-        val airTemp = state.airTempInput.parseOptionalDouble(Limits.AIR_TEMP)
-            ?: return setError(UiText.Res(R.string.sheet_header_error_air_temp))
-        val trackTemp = state.trackTempInput.parseOptionalDouble(Limits.TRACK_TEMP)
-            ?: return setError(UiText.Res(R.string.sheet_header_error_track_temp))
-        val humidity = state.humidityInput.parseOptionalDouble(Limits.HUMIDITY)
-            ?: return setError(UiText.Res(R.string.sheet_header_error_humidity))
-        val bestLapSec = state.bestLapInput.parseOptionalDouble(Limits.BEST_LAP_SEC)
-            ?: return setError(UiText.Res(R.string.sheet_header_error_best_lap))
+        val airTemp = state.airTempInput.parseOptionalDouble(Limits.AIR_TEMP) ?: return
+        val trackTemp = state.trackTempInput.parseOptionalDouble(Limits.TRACK_TEMP) ?: return
+        val humidity = state.humidityInput.parseOptionalDouble(Limits.HUMIDITY) ?: return
+        val bestLapSec = state.bestLapInput.parseOptionalDouble(Limits.BEST_LAP_SEC) ?: return
 
         viewModelScope.launch {
             sheetRepository.updateSheet(
@@ -170,12 +199,20 @@ class SheetHeaderEditViewModel @Inject constructor(
     // ----- 内部 -----
 
     private fun update(transform: SheetHeaderEditUiState.() -> SheetHeaderEditUiState) {
-        _uiState.update { it.transform().copy(errorMessage = null) }
+        _uiState.update { it.transform() }
     }
 
-    private fun setError(message: UiText) {
-        _uiState.update { it.copy(errorMessage = message) }
-    }
+    /**
+     * 入力のたびに走る検証（BUG-7。`ChassisEditViewModel` と同じ規則）。
+     *
+     * 走行条件は**すべて任意項目**なので、空欄は違反ではなく「値なし」。
+     * 数値にならない・範囲外のときだけ [messageRes] のエラーを返す。
+     */
+    private fun errorOf(
+        text: String,
+        range: ClosedFloatingPointRange<Double>,
+        @StringRes messageRes: Int
+    ): UiText? = if (text.parseOptionalDouble(range) == null) UiText.Res(messageRes) else null
 
     /**
      * 空欄なら「値なし」、数値かつ範囲内なら値、それ以外は `null`（＝入力エラー）。
@@ -226,5 +263,19 @@ data class SheetHeaderEditUiState(
     val baselineId: String? = null,
     val baselineCandidates: List<BaselineCandidate> = emptyList(),
     val isDatePickerOpen: Boolean = false,
-    val errorMessage: UiText? = null
-)
+    val airTempError: UiText? = null,
+    val trackTempError: UiText? = null,
+    val humidityError: UiText? = null,
+    val bestLapError: UiText? = null
+) {
+    /**
+     * 保存できるか（BUG-7 と同じ規約。HANDOFF §5.9）。
+     *
+     * 走行条件はすべて任意なので、空欄は保存を止めない。
+     * 必須はシート名だけで、こちらは自由文字列なので「埋まっているか」だけを見る。
+     */
+    val canSave: Boolean
+        get() = airTempError == null && trackTempError == null &&
+            humidityError == null && bestLapError == null &&
+            nameInput.isNotBlank()
+}

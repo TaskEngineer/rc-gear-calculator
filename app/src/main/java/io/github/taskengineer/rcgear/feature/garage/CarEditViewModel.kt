@@ -4,10 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.ui.ScreenEvent
 import io.github.taskengineer.rcgear.core.ui.ScreenEvents
-import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.domain.model.Car
 import io.github.taskengineer.rcgear.domain.model.Chassis
 import io.github.taskengineer.rcgear.domain.model.Maker
@@ -81,11 +79,11 @@ class CarEditViewModel @Inject constructor(
     // ----- 入力 -----
 
     fun onNameChange(value: String) {
-        _uiState.update { it.copy(nameInput = value, errorMessage = null) }
+        _uiState.update { it.copy(nameInput = value) }
     }
 
     fun onNoteChange(value: String) {
-        _uiState.update { it.copy(noteInput = value, errorMessage = null) }
+        _uiState.update { it.copy(noteInput = value) }
     }
 
     fun onArchivedChange(value: Boolean) {
@@ -104,31 +102,19 @@ class CarEditViewModel @Inject constructor(
 
     fun onChassisSelected(chassisId: String) {
         val selected = findChassis(_uiState.value.makers, chassisId) ?: return
-        _uiState.update {
-            it.copy(
-                selectedChassis = selected,
-                isChassisSheetOpen = false,
-                errorMessage = null
-            )
-        }
+        _uiState.update { it.copy(selectedChassis = selected, isChassisSheetOpen = false) }
     }
 
     // ----- 保存 -----
 
     fun onSave() {
         val state = _uiState.value
+        // 画面側もボタンを無効にしているが、ここでも止める（最後の関所）
+        if (!state.canSave) return
         val name = state.nameInput.trim()
-        if (name.isEmpty()) {
-            _uiState.update { it.copy(errorMessage = UiText.Res(R.string.car_edit_error_name)) }
-            return
-        }
         // 車の名前は UNIQUE にしていない（CarEntity のコメント参照）。
         // 「TA08 #1」と「TA08 #1（旧）」を自由に付けられるほうが実用的なため。
-        val chassis = state.selectedChassis
-        if (chassis == null) {
-            _uiState.update { it.copy(errorMessage = UiText.Res(R.string.car_edit_error_chassis)) }
-            return
-        }
+        val chassis = state.selectedChassis ?: return
         val note = state.noteInput.trim().takeIf { it.isNotEmpty() }
 
         viewModelScope.launch {
@@ -210,6 +196,14 @@ data class CarEditUiState(
     val selectedChassis: SelectedChassis? = null,
     val isArchived: Boolean = false,
     val isChassisSheetOpen: Boolean = false,
-    val errorMessage: UiText? = null,
     val showDeleteConfirm: Boolean = false
-)
+) {
+    /**
+     * 保存できるか（BUG-7 と同じ規約。HANDOFF §5.9）。
+     *
+     * この画面に「入力できるが不正」な状態は無い — 名前は自由文字列で、
+     * シャーシは一覧から選ぶので不正な選択ができない。
+     * 必須の 2 つが埋まっているかだけを見る（エラー文は出さない）。
+     */
+    val canSave: Boolean get() = nameInput.isNotBlank() && selectedChassis != null
+}

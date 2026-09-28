@@ -23,7 +23,7 @@
 # Windows / PowerShell。JAVA は PATH に無いので JAVA_HOME を明示する
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 .\gradlew.bat :app:assembleDebug --console=plain      # デバッグビルド
-.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 348 件）
+.\gradlew.bat test --console=plain                    # 全モジュールの単体テスト（現在 351 件）
 .\gradlew.bat :core:domain:test --console=plain       # ドメインのみ（Android を経由しないので速い）
 .\gradlew.bat :app:lintDebug --console=plain          # Android Lint
 ```
@@ -119,6 +119,9 @@ navigation/ RcGearApp（Scaffold + NavigationBar）、RcGearNavHost、Routes
 - ViewModel は `@HiltViewModel`。画面遷移引数は `navigation/Routes.kt` の復元関数（`savedStateHandle.calcRoute()` 等）から取る。
   `toRoute<T>()` は Bundle を要求し JVM 単体テストで落ちるので使わない（`docs/HANDOFF.md` §5.6）。
   画面を閉じる・戻るは UiState の Boolean ではなく `core/ui/ScreenEvent` で流す。
+- **編集フォームの検証は入力のたびに行う**（`docs/HANDOFF.md` §5.9）。項目ごとの
+  `xxxError: UiText?` を欄の下に出し、UiState の `canSave` で保存ボタンを止める。
+  保存を押してからまとめて弾く形にしない。空欄はエラーにせず `canSave` 側で弾く。
 - 数値の表示整形は `core/ui/Format.kt` の拡張関数（`formatRatio()` 等）を使う。
   新しく `String.format` を書くときは必ず `Locale.US` を指定する（小数点が `,` になる地域がある）。
 - 例外を握りつぶさない。ユーザーに見せるエラーは UiState の `message` / `errorMessage` に載せて Snackbar / ダイアログで出す。

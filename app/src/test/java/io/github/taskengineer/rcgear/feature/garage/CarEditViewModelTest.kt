@@ -1,9 +1,7 @@
 package io.github.taskengineer.rcgear.feature.garage
 
 import androidx.lifecycle.SavedStateHandle
-import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.ui.ScreenEvent
-import io.github.taskengineer.rcgear.core.ui.UiText
 import io.github.taskengineer.rcgear.domain.model.Car
 import io.github.taskengineer.rcgear.domain.model.SetupValues
 import io.github.taskengineer.rcgear.fake.FakeCarRepository
@@ -66,32 +64,47 @@ class CarEditViewModelTest {
     }
 
     @Test
-    fun `create_名前が空なら保存しない`() = runTest {
+    fun `input_名前が空なら保存できない`() = runTest {
+        // BUG-7 の横展開。押してから弾くのではなく、埋まるまで押させない
         val cars = FakeCarRepository()
         val vm = viewModel(carRepository = cars)
         advanceUntilIdle()
 
         vm.onChassisSelected("tamiya_ta08")
         vm.onNameChange("   ")
+
+        assertFalse(vm.uiState.value.canSave)
+
         vm.onSave()
         advanceUntilIdle()
-
-        assertTrue(cars.stored.isEmpty())
-        assertEquals(UiText.Res(R.string.car_edit_error_name), vm.uiState.value.errorMessage)
+        assertTrue("保存ボタンを無効にしていても ViewModel 側で止まっていない", cars.stored.isEmpty())
     }
 
     @Test
-    fun `create_シャーシ未選択なら保存しない`() = runTest {
+    fun `input_シャーシ未選択なら保存できない`() = runTest {
         val cars = FakeCarRepository()
         val vm = viewModel(carRepository = cars)
         advanceUntilIdle()
 
         vm.onNameChange("TA08 #1")
+
+        assertFalse(vm.uiState.value.canSave)
+
         vm.onSave()
         advanceUntilIdle()
-
         assertTrue(cars.stored.isEmpty())
-        assertEquals(UiText.Res(R.string.car_edit_error_chassis), vm.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `input_名前とシャーシが揃うと保存できるようになる`() = runTest {
+        val vm = viewModel()
+        advanceUntilIdle()
+        assertFalse("空の新規作成が最初から保存できてしまう", vm.uiState.value.canSave)
+
+        vm.onNameChange("TA08 #1")
+        vm.onChassisSelected("tamiya_ta08")
+
+        assertTrue(vm.uiState.value.canSave)
     }
 
     @Test
