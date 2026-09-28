@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.AlertDialog
@@ -18,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -25,11 +27,13 @@ import io.github.taskengineer.rcgear.R
 import io.github.taskengineer.rcgear.core.designsystem.component.LabeledRow
 import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
 import io.github.taskengineer.rcgear.core.ui.RcDetailScaffold
+import io.github.taskengineer.rcgear.core.ui.Share
 import io.github.taskengineer.rcgear.core.ui.formatDate
 import io.github.taskengineer.rcgear.core.ui.formatDecimals
 import io.github.taskengineer.rcgear.core.ui.formatLapTime
 import io.github.taskengineer.rcgear.core.ui.formatRatio
 import io.github.taskengineer.rcgear.core.ui.formatSpeed
+import io.github.taskengineer.rcgear.core.ui.rememberStrings
 import io.github.taskengineer.rcgear.domain.model.GearCalculationResult
 import io.github.taskengineer.rcgear.domain.model.SessionConditions
 import io.github.taskengineer.rcgear.domain.schema.TouringSetupSchema
@@ -56,6 +60,9 @@ fun SheetDetailScreen(
     viewModel: SheetDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val strings = rememberStrings()
+    val chooserTitle = stringResource(R.string.sheet_share_chooser)
 
     RcDetailScaffold(
         title = state.name,
@@ -64,6 +71,37 @@ fun SheetDetailScreen(
         isLoading = state.isLoading,
         modifier = modifier,
         actions = {
+            IconButton(
+                onClick = {
+                    // テキストの組み立てはコンポジションの外。
+                    // 表示と同じ書式になるよう setupValueString を共有している（F-4）
+                    Share.text(
+                        context = context,
+                        text = SheetTextFormatter.format(
+                            strings = strings,
+                            sheetName = state.name,
+                            carName = state.carName,
+                            chassisName = state.chassis?.let { chassis ->
+                                listOf(chassis.makerName, chassis.name)
+                                    .filter { it.isNotBlank() }
+                                    .joinToString(" ")
+                            },
+                            conditions = state.conditions,
+                            note = state.note,
+                            values = state.values,
+                            traits = state.traits,
+                            gearResult = state.gearResult
+                        ),
+                        subject = state.name,
+                        chooserTitle = chooserTitle
+                    )
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = stringResource(R.string.sheet_share)
+                )
+            }
             IconButton(onClick = { onCompareClick(state.sheetId) }) {
                 Icon(
                     imageVector = Icons.Filled.CompareArrows,

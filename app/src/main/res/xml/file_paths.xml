@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider が外部に渡してよいディレクトリ（F-4）。
+
+  共有用のファイルだけを置く `cache/shared/` に限定する。
+  ルート（`.`）を公開すると、エクスポート JSON やデータベースまで
+  Uri を組み立てれば読める状態になる。共有は「その 1 ファイルだけ」の操作なので、
+  受け皿もその 1 ディレクトリだけにしておく。
+-->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +48,7 @@ import io.github.taskengineer.rcgear.core.designsystem.component.MetricsGrid
 import io.github.taskengineer.rcgear.core.designsystem.component.RcCard
 import io.github.taskengineer.rcgear.core.designsystem.component.RcSlider
 import io.github.taskengineer.rcgear.core.ui.ChassisSelectBottomSheet
+import io.github.taskengineer.rcgear.core.ui.Share
 import io.github.taskengineer.rcgear.core.ui.asString
 import io.github.taskengineer.rcgear.domain.model.GearCalculationInput
 import io.github.taskengineer.rcgear.feature.calc.component.BalanceBar
@@ -100,6 +102,8 @@ fun CalcScreen(
     // 結果エリアの描画内容を記録する GraphicsLayer。
     // 描画のたびに record されるので、保存時点の最新の見た目が取れる。
     val captureLayer = rememberGraphicsLayer()
+    val shareChooserTitle = stringResource(R.string.calc_share_chooser)
+    val shareFailedMessage = stringResource(R.string.calc_share_failed)
 
     val imageExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("image/png")
@@ -192,6 +196,26 @@ fun CalcScreen(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // 共有（F-4）: 保存（SAF）とは別操作。ピットでは投げるほうが多い
+                SmallFloatingActionButton(
+                    onClick = {
+                        scope.launch {
+                            val bitmap = captureLayer.toImageBitmap().asAndroidBitmap()
+                            val shared = Share.image(
+                                context = context,
+                                bitmap = bitmap,
+                                fileName = defaultImageFileName(),
+                                chooserTitle = shareChooserTitle
+                            )
+                            if (!shared) snackbarHostState.showSnackbar(shareFailedMessage)
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Share,
+                        contentDescription = stringResource(R.string.calc_share_image)
+                    )
+                }
                 SmallFloatingActionButton(
                     onClick = { imageExportLauncher.launch(defaultImageFileName()) }
                 ) {

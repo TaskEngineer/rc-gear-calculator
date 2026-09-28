@@ -72,6 +72,9 @@
     <string name="calc_chassis_unselected_hint">タップしてメーカー・シャーシを選ぶ</string>
     <string name="calc_chassis_internal_ratio">内部減速比 %1$s</string>
     <string name="calc_export_image">画像として保存</string>
+    <string name="calc_share_image">画像を共有</string>
+    <string name="calc_share_chooser">計算結果を共有</string>
+    <string name="calc_share_failed">共有用の画像を作れませんでした</string>
     <!-- シートとの往復（G-5） -->
     <string name="calc_sheet_context">%1$s / %2$s から読み込み</string>
     <string name="calc_sheet_incomplete">シートに入っていなかった項目は前回値のままです</string>
@@ -259,6 +262,14 @@
     <string name="sheet_detail_delete_confirm_text">「%1$s」を削除します。取り消せません。</string>
     <string name="sheet_detail_updated_at">更新 %1$s</string>
     <string name="sheet_detail_conditions_section">走行条件</string>
+
+    <!-- 共有（F-4）。テキスト版シートの書式 -->
+    <string name="sheet_share">共有</string>
+    <string name="sheet_share_chooser">セッティングシートを共有</string>
+    <string name="sheet_share_title">%1$s / %2$s</string>
+    <string name="sheet_share_section">[%1$s]</string>
+    <string name="sheet_share_line">%1$s: </string>
+    <string name="sheet_share_cell">%1$s %2$s</string>
     <string name="sheet_detail_open_calc">CALC で調整する</string>
     <string name="sheet_detail_gear_incomplete">ギアの値が足りないため計算できません</string>
 
